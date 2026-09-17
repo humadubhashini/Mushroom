@@ -1,0 +1,13 @@
+# Uploaded user content (keep the folders via .gitkeep, ignore actual uploads)
+assets/uploads/listings/*
+!assets/uploads/listings/.gitkeep
+assets/uploads/diagnoses/*
+!assets/uploads/diagnoses/.gitkeep
+assets/uploads/profiles/*
+!assets/uploads/profiles/.gitkeep
+assets/uploads/tutorials/*
+!assets/uploads/tutorials/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
