@@ -41,6 +41,16 @@ A PHP/MySQL web application implementing the system described in the research pr
 4. **Check the DB config**: `config/db.php` already matches XAMPP's defaults (`host=localhost`, `user=root`, `password=''`). Edit it only if your MySQL uses a password.
 5. **Open the site**: `http://localhost/mushroom-system/`
 
+## Contact Details & Feedback
+
+The **Contact** page (`contact.php`, linked in the menu and footer) shows the phone number, email and Facebook page. Logged-in farmers and buyers can send ideas, questions and complaints; admins read and reply under **Admin Panel → Feedback**, and the user is notified. Edit the contact details in `config/app.php`:
+
+```php
+define('CONTACT_PHONE', '+94 77 123 4567');
+define('CONTACT_EMAIL', 'info@mushroomdirect.lk');
+define('CONTACT_FACEBOOK_URL', 'https://www.facebook.com/MushroomDirectLK');
+```
+
 ## Languages
 
 Use the 🌐 **English | සිංහල | தமிழ்** bar at the top of every page. The choice is remembered in a cookie. Interface text lives in `lang/en.php`, `lang/si.php` and `lang/ta.php`. Database content (mushroom types, diseases, treatments, tutorial titles) has `_si` / `_ta` columns, editable from the admin panel. The admin back-office pages are in English.

@@ -29,6 +29,7 @@ $lang = current_lang();
       <?php if (!$user): ?>
         <a href="<?= BASE_URL ?>/buyer/marketplace.php"><?= te('nav.marketplace') ?></a>
         <a href="<?= BASE_URL ?>/help.php"><?= te('nav.help') ?></a>
+        <a href="<?= BASE_URL ?>/contact.php"><?= te('nav.contact') ?></a>
         <a href="<?= BASE_URL ?>/auth/login.php"><?= te('nav.login') ?></a>
         <a href="<?= BASE_URL ?>/auth/register.php" class="btn-nav"><?= te('nav.register') ?></a>
       <?php else: ?>
@@ -48,6 +49,7 @@ $lang = current_lang();
         <?php elseif ($user['role'] === 'expert'): ?>
           <a href="<?= BASE_URL ?>/admin/dashboard.php"><?= te('nav.expert') ?></a>
         <?php endif; ?>
+        <a href="<?= BASE_URL ?>/contact.php"><?= te('nav.contact') ?></a>
         <?php $unread = unread_notification_count(); ?>
         <a href="<?= BASE_URL ?>/shared/notifications.php" title="<?= te('nav.notifications') ?>">🔔<?php if ($unread): ?><span class="notif-count"><?= $unread ?></span><?php endif; ?></a>
         <a href="<?= BASE_URL ?>/shared/profile.php"><?= te('nav.profile') ?></a>

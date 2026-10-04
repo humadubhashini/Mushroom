@@ -11,6 +11,8 @@ $revenue = $pdo->query("SELECT COALESCE(SUM(total_price),0) s FROM orders WHERE 
 $diagnosisCount = $pdo->query('SELECT COUNT(*) c FROM diagnoses')->fetch()['c'];
 $lowConfidenceCount = $pdo->query('SELECT COUNT(*) c FROM diagnoses WHERE low_confidence_flag = 1')->fetch()['c'];
 $openDisputes = $pdo->query("SELECT COUNT(*) c FROM disputes WHERE status = 'open'")->fetch()['c'];
+ensure_feedback_table();
+$newFeedback = $pdo->query("SELECT COUNT(*) c FROM feedback WHERE status = 'new'")->fetch()['c'];
 
 $pageTitle = $isAdmin ? 'Admin Dashboard' : 'Expert Dashboard';
 include __DIR__ . '/../includes/header.php';
@@ -36,6 +38,7 @@ include __DIR__ . '/../includes/header.php';
   <a href="<?= BASE_URL ?>/admin/listings.php" class="btn btn-outline">🛒 Manage Listings</a>
   <a href="<?= BASE_URL ?>/admin/reports.php" class="btn btn-outline">📊 Reports</a>
   <a href="<?= BASE_URL ?>/admin/disputes.php" class="btn btn-outline">⚖ Disputes</a>
+  <a href="<?= BASE_URL ?>/admin/feedback.php" class="btn btn-outline">💬 Feedback (<?= (int) $newFeedback ?> new)</a>
   <a href="<?= BASE_URL ?>/admin/audit_log.php" class="btn btn-outline">📝 Audit Log</a>
   <?php endif; ?>
   <a href="<?= BASE_URL ?>/admin/mushroom_types.php" class="btn btn-outline">🍄 Mushroom Types &amp; Prices</a>
