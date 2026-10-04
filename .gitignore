@@ -16,3 +16,5 @@ Thumbs.db
 ai_model/dataset/
 ai_model/*.keras
 ai_model/__pycache__/
+assets/uploads/mushrooms/*
+!assets/uploads/mushrooms/.gitkeep

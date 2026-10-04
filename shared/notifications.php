@@ -25,24 +25,24 @@ $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY cr
 $stmt->execute([$userId]);
 $notifications = $stmt->fetchAll();
 
-$pageTitle = 'Notifications';
+$pageTitle = t('nav.notifications');
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-  <h1>🔔 Notifications</h1>
+  <h1>🔔 <?= te('nav.notifications') ?></h1>
   <?php if ($notifications): ?>
-    <form method="post"><?= csrf_field() ?><button class="btn btn-small btn-outline" type="submit">Mark all as read</button></form>
+    <form method="post"><?= csrf_field() ?><button class="btn btn-small btn-outline" type="submit"><?= te('notif.mark_all') ?></button></form>
   <?php endif; ?>
 </div>
 
 <?php if (!$notifications): ?>
-  <p class="muted">You have no notifications yet.</p>
+  <p class="muted"><?= te('notif.none') ?></p>
 <?php else: ?>
   <ul class="notif-list card" style="padding:0;">
     <?php foreach ($notifications as $n): ?>
       <li class="<?= $n['is_read'] ? '' : 'unread' ?>">
-        <a href="?open=<?= (int) $n['id'] ?>" style="color:inherit; text-decoration:none;"><?= e($n['message']) ?></a><br>
+        <a href="?open=<?= (int) $n['id'] ?>" style="color:inherit; text-decoration:none;"><?= e(notification_text($n['message'])) ?></a><br>
         <span class="time"><?= e(date('d M Y, h:i A', strtotime($n['created_at']))) ?></span>
       </li>
     <?php endforeach; ?>

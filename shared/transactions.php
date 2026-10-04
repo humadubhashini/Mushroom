@@ -24,21 +24,21 @@ foreach ($payments as $p) {
     if ($p['status'] === 'success') $total += $p['amount'];
 }
 
-$pageTitle = 'Transactions';
+$pageTitle = t('nav.transactions');
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<h1>💳 Transaction History</h1>
+<h1>💳 <?= te('tx.title') ?></h1>
 <div class="stat-grid">
-  <div class="stat-card"><div class="num"><?= format_money($total) ?></div><div class="label"><?= $user['role'] === 'farmer' ? 'Total Received' : 'Total Paid' ?></div></div>
-  <div class="stat-card"><div class="num"><?= count($payments) ?></div><div class="label">Transactions</div></div>
+  <div class="stat-card"><div class="num"><?= format_money($total) ?></div><div class="label"><?= te($user['role'] === 'farmer' ? 'tx.total_received' : 'receipt.total_paid') ?></div></div>
+  <div class="stat-card"><div class="num"><?= count($payments) ?></div><div class="label"><?= te('nav.transactions') ?></div></div>
 </div>
 
 <?php if (!$payments): ?>
-  <p class="muted">No transactions yet.</p>
+  <p class="muted"><?= te('tx.none') ?></p>
 <?php else: ?>
   <table class="data-table">
-    <tr><th>Date</th><th>Order</th><th><?= $user['role'] === 'farmer' ? 'Buyer' : 'Farmer' ?></th><th>Mushroom</th><th>Amount</th><th>Reference</th><th>Status</th><th></th></tr>
+    <tr><th><?= te('common.date') ?></th><th>#</th><th><?= te($user['role'] === 'farmer' ? 'common.buyer' : 'common.farmer') ?></th><th><?= te('common.mushroom') ?></th><th><?= te('tx.amount') ?></th><th><?= te('receipt.reference') ?></th><th><?= te('common.status') ?></th><th></th></tr>
     <?php foreach ($payments as $p): ?>
       <tr>
         <td><?= format_date($p['created_at']) ?></td>
@@ -47,9 +47,9 @@ include __DIR__ . '/../includes/header.php';
         <td><?= e($p['mushroom_type']) ?></td>
         <td><?= format_money($p['amount']) ?></td>
         <td><?= e($p['gateway_reference'] ?: '-') ?></td>
-        <td><span class="badge badge-<?= $p['status'] === 'success' ? 'completed' : e($p['status']) ?>"><?= e(ucfirst($p['status'])) ?></span>
-          <?php if ($p['failure_reason']): ?><br><small class="muted"><?= e($p['failure_reason']) ?></small><?php endif; ?></td>
-        <td><?php if ($p['status'] === 'success'): ?><a class="btn btn-small btn-outline" href="<?= BASE_URL ?>/shared/receipt.php?order_id=<?= (int) $p['order_id'] ?>">Receipt</a><?php endif; ?></td>
+        <td><span class="badge badge-<?= $p['status'] === 'success' ? 'completed' : e($p['status']) ?>"><?= e(status_label($p['status'])) ?></span>
+          <?php if ($p['failure_reason']): ?><br><small class="muted"><?= e(t($p['failure_reason'])) ?></small><?php endif; ?></td>
+        <td><?php if ($p['status'] === 'success'): ?><a class="btn btn-small btn-outline" href="<?= BASE_URL ?>/shared/receipt.php?order_id=<?= (int) $p['order_id'] ?>"><?= te('common.receipt') ?></a><?php endif; ?></td>
       </tr>
     <?php endforeach; ?>
   </table>

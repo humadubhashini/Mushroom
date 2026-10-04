@@ -10,18 +10,18 @@ verify_csrf();
 
 $listingId = (int) ($_POST['listing_id'] ?? 0);
 $quantity = $_POST['quantity_kg'] ?? '';
-$deliveryDate = $_POST['delivery_date'] ?: null;
+$deliveryDate = ($_POST['delivery_date'] ?? '') ?: null;
 
 $stmt = $pdo->prepare("SELECT * FROM listings WHERE id = ? AND status = 'active'");
 $stmt->execute([$listingId]);
 $listing = $stmt->fetch();
 
 if (!$listing) {
-    flash('error', 'This listing is no longer available.');
+    flash('error', t('market.unavailable'));
     redirect('/buyer/marketplace.php');
 }
 if (!is_numeric($quantity) || $quantity <= 0 || $quantity > $listing['quantity_kg']) {
-    flash('error', 'Please enter a valid quantity within the available stock.');
+    flash('error', t('order.bad_qty'));
     redirect('/buyer/listing_view.php?id=' . $listingId);
 }
 
@@ -41,15 +41,14 @@ try {
     $pdo->prepare('UPDATE listings SET quantity_kg = ?, status = ? WHERE id = ?')
         ->execute([max(0, $remaining), $newStatus, $listingId]);
 
-    notify($listing['farmer_id'],
-        'New order #' . $orderId . ': ' . $quantity . ' kg of ' . $listing['mushroom_type'] . ' from ' . current_user()['full_name'] . '.',
-        '/farmer/orders.php');
+    notify($listing['farmer_id'], 'notif.new_order', '/farmer/orders.php',
+        ['order' => $orderId, 'qty' => $quantity, 'name' => $listing['mushroom_type'], 'buyer' => current_user()['full_name']]);
 
     $pdo->commit();
-    flash('success', 'Order placed! Waiting for the farmer to confirm before payment.');
+    flash('success', t('order.placed'));
     redirect('/buyer/orders.php');
 } catch (Exception $e) {
     $pdo->rollBack();
-    flash('error', 'Could not place the order. Please try again.');
+    flash('error', t('order.failed'));
     redirect('/buyer/listing_view.php?id=' . $listingId);
 }

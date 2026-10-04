@@ -16,15 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $current = $_POST['current_password'] ?? '';
         $new = $_POST['new_password'] ?? '';
         if (!password_verify($current, $profile['password_hash'])) {
-            flash('error', 'Your current password is incorrect.');
+            flash('error', t('profile.err_current'));
         } elseif (strlen($new) < 6) {
-            flash('error', 'New password must be at least 6 characters.');
+            flash('error', t('register.err_password'));
         } elseif ($new !== ($_POST['confirm_password'] ?? '')) {
-            flash('error', 'New passwords do not match.');
+            flash('error', t('register.err_match'));
         } else {
             $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
                 ->execute([password_hash($new, PASSWORD_BCRYPT), $userId]);
-            flash('success', 'Password changed successfully.');
+            flash('success', t('profile.password_changed'));
         }
         redirect('/shared/profile.php');
     }
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address = trim($_POST['address'] ?? '');
 
     $errors = [];
-    if ($fullName === '') $errors[] = 'Full name is required.';
+    if ($fullName === '') $errors[] = t('register.err_name');
 
     $imageError = null;
     $imageFile = handle_image_upload('profile_image', UPLOAD_PROFILES, $imageError);
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE users SET full_name = ?, phone = ?, business_name = ?, address = ?, profile_image = ? WHERE id = ?')
             ->execute([$fullName, $phone ?: null, $businessName ?: null, $address ?: null, $imageFile ?: $profile['profile_image'], $userId]);
         $_SESSION['user']['full_name'] = $fullName;
-        flash('success', 'Profile updated.');
+        flash('success', t('profile.updated'));
     } else {
         flash('error', implode(' ', $errors));
     }
@@ -59,56 +59,56 @@ if ($profile['role'] === 'farmer') {
     $rating = $r->fetch();
 }
 
-$pageTitle = 'My Profile';
+$pageTitle = t('profile.title');
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<h1>My Profile</h1>
+<h1><?= te('profile.title') ?></h1>
 
 <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items:start;">
   <div class="card">
     <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px;">
-      <img src="<?= $profile['profile_image'] ? BASE_URL . '/assets/uploads/profiles/' . e($profile['profile_image']) : 'https://placehold.co/96x96?text=%F0%9F%91%A4' ?>" alt="Profile" style="width:96px; height:96px; border-radius:50%; object-fit:cover;">
+      <img src="<?= $profile['profile_image'] ? BASE_URL . '/assets/uploads/profiles/' . e($profile['profile_image']) : AVATAR_PLACEHOLDER ?>" alt="Profile" style="width:96px; height:96px; border-radius:50%; object-fit:cover;">
       <div>
         <strong><?= e($profile['full_name']) ?></strong><br>
-        <span class="badge badge-active"><?= e(ucfirst($profile['role'])) ?></span>
+        <span class="badge badge-active"><?= te('role.' . $profile['role']) ?></span>
         <?php if ($rating && $rating['total']): ?>
           <br><span class="stars"><?= str_repeat('★', (int) round($rating['avg_rating'])) ?></span>
-          <span class="muted"><?= number_format($rating['avg_rating'], 1) ?> (<?= (int) $rating['total'] ?> reviews)</span>
+          <span class="muted"><?= number_format($rating['avg_rating'], 1) ?> (<?= te('profile.reviews', ['n' => (int) $rating['total']]) ?>)</span>
         <?php endif; ?>
       </div>
     </div>
     <form class="stacked" method="post" enctype="multipart/form-data">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="profile">
-      <label>Full Name</label>
+      <label><?= te('form.full_name') ?></label>
       <input type="text" name="full_name" value="<?= e($profile['full_name']) ?>" required>
-      <label>Email (cannot be changed)</label>
+      <label><?= te('profile.email_fixed') ?></label>
       <input type="email" value="<?= e($profile['email']) ?>" disabled>
-      <label>Phone</label>
+      <label><?= te('form.phone') ?></label>
       <input type="tel" name="phone" value="<?= e($profile['phone']) ?>">
-      <label><?= $profile['role'] === 'buyer' ? 'Hotel / Restaurant Name' : ($profile['role'] === 'farmer' ? 'Farm Name' : 'Organisation') ?></label>
+      <label><?= te($profile['role'] === 'buyer' ? 'profile.hotel_name' : ($profile['role'] === 'farmer' ? 'profile.farm_name' : 'profile.organisation')) ?></label>
       <input type="text" name="business_name" value="<?= e($profile['business_name']) ?>">
-      <label>Address</label>
+      <label><?= te('form.address') ?></label>
       <input type="text" name="address" value="<?= e($profile['address']) ?>">
-      <label>Profile Image</label>
+      <label><?= te('profile.image') ?></label>
       <input type="file" name="profile_image" accept="image/*">
-      <button type="submit" class="btn">Save Profile</button>
+      <button type="submit" class="btn"><?= te('profile.save') ?></button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="mt-0">Change Password</h2>
+    <h2 class="mt-0"><?= te('profile.change_password') ?></h2>
     <form class="stacked" method="post">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="password">
-      <label>Current Password</label>
+      <label><?= te('form.current_password') ?></label>
       <input type="password" name="current_password" required>
-      <label>New Password</label>
+      <label><?= te('form.new_password') ?></label>
       <input type="password" name="new_password" required minlength="6">
-      <label>Confirm New Password</label>
+      <label><?= te('form.confirm_password') ?></label>
       <input type="password" name="confirm_password" required minlength="6">
-      <button type="submit" class="btn">Change Password</button>
+      <button type="submit" class="btn"><?= te('profile.change_password') ?></button>
     </form>
   </div>
 </div>

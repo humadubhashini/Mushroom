@@ -38,6 +38,7 @@ include __DIR__ . '/../includes/header.php';
   <a href="<?= BASE_URL ?>/admin/disputes.php" class="btn btn-outline">⚖ Disputes</a>
   <a href="<?= BASE_URL ?>/admin/audit_log.php" class="btn btn-outline">📝 Audit Log</a>
   <?php endif; ?>
+  <a href="<?= BASE_URL ?>/admin/mushroom_types.php" class="btn btn-outline">🍄 Mushroom Types &amp; Prices</a>
   <a href="<?= BASE_URL ?>/admin/tutorials.php" class="btn btn-outline">🎓 Manage Tutorials</a>
   <a href="<?= BASE_URL ?>/admin/diseases.php" class="btn btn-outline">💊 Treatment Content</a>
   <a href="<?= BASE_URL ?>/admin/diagnoses.php" class="btn btn-outline">🤖 AI Diagnosis Log</a>

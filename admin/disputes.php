@@ -29,9 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$dispute['quantity_kg'], $dispute['listing_id']]);
         }
 
-        $msg = 'Dispute on order #' . $dispute['order_id'] . ' was ' . $decision . ': ' . $response;
-        notify($dispute['buyer_id'], $msg, '/shared/dispute.php?order_id=' . $dispute['order_id']);
-        notify($dispute['farmer_id'], $msg, '/shared/dispute.php?order_id=' . $dispute['order_id']);
+        $vars = ['order' => $dispute['order_id'], 'response' => $response];
+        $key = $decision === 'resolved' ? 'notif.dispute_resolved' : 'notif.dispute_rejected';
+        notify($dispute['buyer_id'], $key, '/shared/dispute.php?order_id=' . $dispute['order_id'], $vars);
+        notify($dispute['farmer_id'], $key, '/shared/dispute.php?order_id=' . $dispute['order_id'], $vars);
         log_admin_action('Marked dispute #' . $id . ' (order #' . $dispute['order_id'] . ') as ' . $decision);
         flash('success', 'Dispute updated and both parties notified.');
     }

@@ -11,8 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $videoUrl = trim($_POST['video_url'] ?? '');
-    $categoryId = $_POST['category_id'] ?: null;
-    $relatedDiseaseId = $_POST['related_disease_id'] ?: null;
+    $categoryId = ($_POST['category_id'] ?? '') ?: null;
+    $relatedDiseaseId = ($_POST['related_disease_id'] ?? '') ?: null;
 
     $errors = [];
     if ($title === '') $errors[] = 'Title is required.';

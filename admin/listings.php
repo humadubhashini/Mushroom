@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($listing = $stmt->fetch()) {
         $pdo->prepare("UPDATE listings SET status = 'removed' WHERE id = ?")->execute([$listingId]);
         log_admin_action('Removed listing #' . $listingId . ' (' . $listing['mushroom_type'] . ')');
-        notify($listing['farmer_id'], 'Your listing "' . $listing['mushroom_type'] . '" was removed by an administrator for violating platform policy.', '/farmer/listings.php');
+        notify($listing['farmer_id'], 'notif.listing_removed', '/farmer/listings.php', ['name' => $listing['mushroom_type']]);
     }
     flash('success', 'Listing removed.');
     redirect('/admin/listings.php');

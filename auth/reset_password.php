@@ -11,7 +11,7 @@ if ($token !== '') {
 }
 
 if (!$user) {
-    flash('error', 'This password reset link is invalid or has expired.');
+    flash('error', t('reset.invalid'));
     redirect('/auth/forgot_password.php');
 }
 
@@ -21,33 +21,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm = $_POST['confirm_password'] ?? '';
 
     if (strlen($password) < 6) {
-        flash('error', 'Password must be at least 6 characters.');
+        flash('error', t('register.err_password'));
     } elseif ($password !== $confirm) {
-        flash('error', 'Passwords do not match.');
+        flash('error', t('register.err_match'));
     } else {
         // Completing a reset via the emailed link also proves email ownership.
         $pdo->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires_at = NULL, is_verified = 1 WHERE id = ?')
             ->execute([password_hash($password, PASSWORD_BCRYPT), $user['id']]);
-        flash('success', 'Your password has been reset. Please log in.');
+        flash('success', t('reset.done'));
         redirect('/auth/login.php');
     }
     redirect('/auth/reset_password.php?token=' . urlencode($token));
 }
 
-$pageTitle = 'Reset Password';
+$pageTitle = t('reset.title');
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="card form-narrow">
-  <h1 class="mt-0">Choose a New Password</h1>
+  <h1 class="mt-0"><?= te('reset.title') ?></h1>
   <form class="stacked" method="post" action="">
     <?= csrf_field() ?>
     <input type="hidden" name="token" value="<?= e($token) ?>">
-    <label>New Password</label>
+    <label><?= te('form.new_password') ?></label>
     <input type="password" name="password" required minlength="6">
-    <label>Confirm New Password</label>
+    <label><?= te('form.confirm_password') ?></label>
     <input type="password" name="confirm_password" required minlength="6">
-    <button type="submit" class="btn">Reset Password</button>
+    <button type="submit" class="btn"><?= te('reset.button') ?></button>
   </form>
 </div>
 

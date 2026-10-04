@@ -1,8 +1,11 @@
 </main>
 <footer class="site-footer">
   <div class="container">
-    <p><a href="<?= BASE_URL ?>/help.php" style="color:inherit;">Help &amp; Quick-Start Guide</a></p>
-    <p>&copy; <?= date('Y') ?> Mushroom Direct &mdash; AI-Based Direct Supply Chain and Disease Diagnostic System for Mushroom Cultivation in Sri Lanka.</p>
+    <p>
+      <a href="<?= BASE_URL ?>/mushrooms/index.php" style="color:inherit;"><?= te('nav.mushrooms') ?></a> &middot;
+      <a href="<?= BASE_URL ?>/help.php" style="color:inherit;"><?= te('footer.help') ?></a>
+    </p>
+    <p>&copy; <?= date('Y') ?> <?= te('app.name') ?> &mdash; <?= te('footer.tagline') ?></p>
   </div>
 </footer>
 </body>

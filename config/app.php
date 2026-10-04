@@ -37,8 +37,9 @@ define('UPLOAD_LISTINGS', __DIR__ . '/../assets/uploads/listings/');
 define('UPLOAD_DIAGNOSES', __DIR__ . '/../assets/uploads/diagnoses/');
 define('UPLOAD_PROFILES', __DIR__ . '/../assets/uploads/profiles/');
 define('UPLOAD_TUTORIALS', __DIR__ . '/../assets/uploads/tutorials/');
+define('UPLOAD_MUSHROOMS', __DIR__ . '/../assets/uploads/mushrooms/');
 
-define('MAX_UPLOAD_BYTES', 5 * 1024 * 1024); // 5MB, NFR-PERF friendly limit for uploads
+define('MAX_UPLOAD_BYTES', 10 * 1024 * 1024); // 10MB - phone camera photos are usually 2-8MB
 define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp']);
 
 // AI diagnostic confidence threshold below which the result is flagged (FR-AI.6)

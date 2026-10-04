@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($diag = $stmt->fetch()) {
         $pdo->prepare('UPDATE diagnoses SET reviewed_disease_id = ?, expert_note = ?, reviewed_by = ? WHERE id = ?')
             ->execute([$reviewedId, $note ?: null, current_user()['id'], $id]);
-        notify($diag['farmer_id'], 'An agricultural expert reviewed your diagnosis #' . $id . '. Tap to see their advice.', '/farmer/diagnosis_history.php');
+        notify($diag['farmer_id'], 'notif.expert_reviewed', '/farmer/diagnosis_view.php?id=' . $id, ['id' => $id]);
         log_admin_action('Reviewed AI diagnosis #' . $id);
         flash('success', 'Review saved and the farmer has been notified.');
     }

@@ -2,67 +2,212 @@
 /**
  * AI disease classification service for the "Snap & Detect" feature (FR-AI.1 - FR-AI.6).
  *
- * Design note (see SRS NFR-MAINT.2): this function is the single integration point
- * between the marketplace/UI code and the disease-detection model. It currently
- * ships with a lightweight colour-signature heuristic (built on PHP's GD extension,
- * which is bundled with XAMPP) so the full system is runnable end-to-end without a
- * GPU or external services. To use the trained Convolutional Neural Network from the
- * research methodology (Section 4.5 of the proposal) instead, replace the body of
- * classify_mushroom_image() with a call to that model's inference API (e.g. a small
- * Flask/TensorFlow-Serving endpoint) and keep the same return shape - no other file
- * needs to change.
+ * Design note (SRS NFR-MAINT.2): classify_mushroom_image() is the single integration
+ * point between the website and the disease-detection model.
  *
- * Returns: ['disease' => string, 'confidence' => float(0-100), 'disease_id' => int|null]
+ *  1. If AI_API_URL is set (config/app.php), the image is sent to the trained CNN
+ *     served by ai_model/app.py.
+ *  2. Otherwise (or if that service is down) a built-in colour-pattern analyser runs,
+ *     using PHP's GD extension, so the feature works on plain XAMPP.
+ *
+ * Returns:
+ *   ['disease' => string, 'confidence' => float 0-100, 'disease_id' => int|null,
+ *    'scores' => [disease => percentage, ...], 'model' => string]
+ * or ['error' => 'gd_missing' | 'unreadable'] when the image cannot be analysed.
  */
+
+const AI_CLASSES = ['Healthy', 'Green Mold', 'Bacterial Blotch', 'Pest Attack'];
 
 function classify_mushroom_image(string $imagePath): array {
     $diseases = classify_load_disease_map();
 
-    // Preferred path: the trained CNN served by ai_model/app.py (FR-AI.2, FR-AI.3).
     if (AI_API_URL !== '') {
         $remote = classify_via_cnn_api($imagePath);
         if ($remote !== null) {
             $remote['disease_id'] = $diseases[$remote['disease']] ?? null;
             return $remote;
         }
-        // If the AI service is down, fall back so farmers still get a result.
+        // AI service unreachable: fall back so farmers still get a result.
     }
 
-    $signature = classify_extract_color_signature($imagePath);
-    if ($signature === null) {
-        // Image could not be read (corrupt file); default to a low-confidence Healthy guess.
-        return ['disease' => 'Healthy', 'confidence' => 40.0, 'disease_id' => $diseases['Healthy'] ?? null, 'model' => 'php-colour-heuristic'];
+    if (!function_exists('imagecreatetruecolor')) {
+        return ['error' => 'gd_missing'];
     }
 
-    [$avgR, $avgG, $avgB, $darkRatio, $greenRatio] = $signature;
+    $features = classify_extract_features($imagePath);
+    if ($features === null) {
+        return ['error' => 'unreadable'];
+    }
 
-    // Heuristic scoring per class. Each score is a rough proxy built from average
-    // colour channels and the proportion of dark/green pixels sampled from the image.
-    $scores = [
-        'Green Mold' => max(0, ($greenRatio * 140) - ($avgB > $avgG ? 20 : 0)),
-        'Bacterial Blotch' => max(0, ($darkRatio * 100) + max(0, ($avgR - $avgG) * 0.4)),
-        'Pest Attack' => max(0, (abs($avgR - $avgB) * 0.3) + ($darkRatio * 40)),
-        'Healthy' => max(0, 60 - ($greenRatio * 100) - ($darkRatio * 80)),
+    // Not enough light mushroom tissue visible (e.g. a dark brown variety or a
+    // photo of the bag/background): report a low-confidence result so an
+    // expert reviews it, rather than guessing.
+    if ($features['clean'] < 0.10 && $features['green'] < 0.04) {
+        $scores = ['Healthy' => 40.0, 'Bacterial Blotch' => 25.0, 'Pest Attack' => 20.0, 'Green Mold' => 15.0];
+        return [
+            'disease' => 'Healthy',
+            'confidence' => 40.0,
+            'disease_id' => $diseases['Healthy'] ?? null,
+            'scores' => $scores,
+            'model' => 'built-in colour analyser',
+        ];
+    }
+
+    // Evidence for each disease = share of the mushroom covered by its symptom;
+    // about 8% coverage counts as full evidence.
+    $severity = [
+        'Green Mold' => min(1, $features['green'] / 0.08),
+        'Bacterial Blotch' => min(1, $features['blotch_in_cap'] / 0.08),
+        'Pest Attack' => min(1, $features['dark_in_cap'] / 0.06),
     ];
-
+    $raw = ['Healthy' => 1 - max($severity)] + $severity;
+    foreach ($raw as $name => $value) {
+        $raw[$name] = $value + 0.05; // never claim 100% certainty
+    }
+    $total = array_sum($raw);
+    $scores = [];
+    foreach ($raw as $name => $value) {
+        $scores[$name] = round($value / $total * 100, 1);
+    }
     arsort($scores);
-    $topDisease = array_key_first($scores);
-    $topScore = reset($scores);
-
-    $total = array_sum($scores) ?: 1;
-    $confidence = round(min(97, max(35, ($topScore / $total) * 100 + 25)), 1);
+    $top = array_key_first($scores);
 
     return [
-        'disease' => $topDisease,
-        'confidence' => $confidence,
-        'disease_id' => $diseases[$topDisease] ?? null,
-        'model' => 'php-colour-heuristic',
+        'disease' => $top,
+        'confidence' => $scores[$top],
+        'disease_id' => $diseases[$top] ?? null,
+        'scores' => $scores,
+        'model' => 'built-in colour analyser',
     ];
 }
 
+function classify_load_disease_map(): array {
+    global $pdo;
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach ($pdo->query('SELECT id, name FROM disease_types')->fetchAll() as $row) {
+            $map[$row['name']] = (int) $row['id'];
+        }
+    }
+    return $map;
+}
+
 /**
- * Sends the image to the Python CNN inference API and returns
- * ['disease' => string, 'confidence' => float, 'model' => string], or null on failure.
+ * Samples a 40x40 grid of pixels and measures how much of the image is clean
+ * mushroom tissue and green mould, and what share of the mushroom cap carries
+ * yellow/brown blotches or dark specks (typical of pest holes / larvae).
+ */
+function classify_extract_features(string $path): ?array {
+    $info = @getimagesize($path);
+    if (!$info) {
+        return null;
+    }
+    $image = null;
+    if ($info[2] === IMAGETYPE_JPEG && function_exists('imagecreatefromjpeg')) {
+        $image = @imagecreatefromjpeg($path);
+    } elseif ($info[2] === IMAGETYPE_PNG && function_exists('imagecreatefrompng')) {
+        $image = @imagecreatefrompng($path);
+    } elseif (defined('IMAGETYPE_WEBP') && $info[2] === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+        $image = @imagecreatefromwebp($path);
+    }
+    if (!$image) {
+        return null;
+    }
+
+    $width = imagesx($image);
+    $height = imagesy($image);
+    $grid = 40;
+    $cells = [];
+    $counts = ['clean' => 0, 'green' => 0, 'blotch' => 0, 'dark' => 0];
+
+    for ($gy = 0; $gy < $grid; $gy++) {
+        for ($gx = 0; $gx < $grid; $gx++) {
+            $x = min($width - 1, (int) (($gx + 0.5) / $grid * $width));
+            $y = min($height - 1, (int) (($gy + 0.5) / $grid * $height));
+            $rgb = imagecolorat($image, $x, $y);
+            [$h, $s, $v] = classify_rgb_to_hsv(($rgb >> 16) & 0xFF, ($rgb >> 8) & 0xFF, $rgb & 0xFF);
+
+            $type = 'other';
+            if ($v < 0.22) {
+                $type = 'dark';
+            } elseif ($h >= 60 && $h <= 170 && $s > 0.25) {
+                $type = 'green';
+            } elseif ($h >= 15 && $h <= 55 && $s > 0.35 && $v <= 0.85) {
+                $type = 'blotch';
+            } elseif ($s < 0.25 && $v > 0.55) {
+                $type = 'clean';
+            }
+            $cells[$gy][$gx] = $type;
+            if (isset($counts[$type])) {
+                $counts[$type]++;
+            }
+        }
+    }
+    imagedestroy($image);
+
+    // A blotch or dark speck only counts when it lies inside the mushroom cap,
+    // i.e. there is clean tissue to its left, right, above and below. This stops
+    // brown soil/bags or a dark background from being read as disease.
+    $enclosed = function ($gy, $gx) use ($cells, $grid) {
+        $found = 0;
+        foreach ([[0, -1], [0, 1], [-1, 0], [1, 0]] as [$dy, $dx]) {
+            for ($y = $gy + $dy, $x = $gx + $dx; $y >= 0 && $y < $grid && $x >= 0 && $x < $grid; $y += $dy, $x += $dx) {
+                if ($cells[$y][$x] === 'clean') {
+                    $found++;
+                    break;
+                }
+            }
+        }
+        return $found === 4;
+    };
+    $blotchInCap = 0;
+    $darkInCap = 0;
+    for ($gy = 0; $gy < $grid; $gy++) {
+        for ($gx = 0; $gx < $grid; $gx++) {
+            if ($cells[$gy][$gx] === 'blotch' && $enclosed($gy, $gx)) {
+                $blotchInCap++;
+            } elseif ($cells[$gy][$gx] === 'dark' && $enclosed($gy, $gx)) {
+                $darkInCap++;
+            }
+        }
+    }
+
+    $n = $grid * $grid;
+    $capArea = max(1, $counts['clean'] + $blotchInCap + $darkInCap);
+    return [
+        'clean' => $counts['clean'] / $n,
+        'green' => $counts['green'] / $n,
+        'blotch_in_cap' => $blotchInCap / $capArea,
+        'dark_in_cap' => $darkInCap / $capArea,
+    ];
+}
+
+/** Returns [hue 0-360, saturation 0-1, value 0-1]. */
+function classify_rgb_to_hsv(int $r, int $g, int $b): array {
+    $r /= 255; $g /= 255; $b /= 255;
+    $max = max($r, $g, $b);
+    $min = min($r, $g, $b);
+    $delta = $max - $min;
+    $h = 0;
+    if ($delta > 0) {
+        if ($max === $r) {
+            $h = 60 * fmod(($g - $b) / $delta, 6);
+        } elseif ($max === $g) {
+            $h = 60 * (($b - $r) / $delta + 2);
+        } else {
+            $h = 60 * (($r - $g) / $delta + 4);
+        }
+    }
+    if ($h < 0) {
+        $h += 360;
+    }
+    return [$h, $max > 0 ? $delta / $max : 0, $max];
+}
+
+/**
+ * Sends the image to the Python CNN inference API (ai_model/app.py).
+ * Returns the result array, or null if the service is unavailable.
  */
 function classify_via_cnn_api(string $imagePath): ?array {
     if (!function_exists('curl_init')) {
@@ -84,94 +229,12 @@ function classify_via_cnn_api(string $imagePath): ?array {
     if ($status !== 200 || !isset($data['disease'], $data['confidence'])) {
         return null;
     }
+    $scores = isset($data['scores']) && is_array($data['scores']) ? $data['scores'] : [$data['disease'] => $data['confidence']];
+    arsort($scores);
     return [
         'disease' => (string) $data['disease'],
         'confidence' => round((float) $data['confidence'], 1),
+        'scores' => $scores,
         'model' => (string) ($data['model'] ?? 'cnn'),
-    ];
-}
-
-function classify_load_disease_map(): array {
-    global $pdo;
-    static $map = null;
-    if ($map === null) {
-        $map = [];
-        $stmt = $pdo->query('SELECT id, name FROM disease_types');
-        foreach ($stmt->fetchAll() as $row) {
-            $map[$row['name']] = (int) $row['id'];
-        }
-    }
-    return $map;
-}
-
-/**
- * Samples a grid of pixels from the image and returns average RGB channels
- * plus the ratio of "dark" pixels and "green-dominant" pixels.
- * Returns null if the image cannot be decoded.
- */
-function classify_extract_color_signature(string $path): ?array {
-    $info = @getimagesize($path);
-    if (!$info) {
-        return null;
-    }
-
-    $image = match ($info['mime']) {
-        'image/jpeg' => @imagecreatefromjpeg($path),
-        'image/png' => @imagecreatefrompng($path),
-        'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : null,
-        default => null,
-    };
-    if (!$image) {
-        return null;
-    }
-
-    $width = imagesx($image);
-    $height = imagesy($image);
-    $gridSize = 20; // sample a 20x20 grid regardless of source resolution
-
-    $sumR = $sumG = $sumB = 0;
-    $darkCount = 0;
-    $greenCount = 0;
-    $samples = 0;
-
-    for ($gx = 0; $gx < $gridSize; $gx++) {
-        for ($gy = 0; $gy < $gridSize; $gy++) {
-            $x = (int) (($gx + 0.5) / $gridSize * $width);
-            $y = (int) (($gy + 0.5) / $gridSize * $height);
-            $x = min($width - 1, max(0, $x));
-            $y = min($height - 1, max(0, $y));
-
-            $rgb = imagecolorat($image, $x, $y);
-            $r = ($rgb >> 16) & 0xFF;
-            $g = ($rgb >> 8) & 0xFF;
-            $b = $rgb & 0xFF;
-
-            $sumR += $r;
-            $sumG += $g;
-            $sumB += $b;
-            $samples++;
-
-            $brightness = ($r + $g + $b) / 3;
-            if ($brightness < 70) {
-                $darkCount++;
-            }
-            if ($g > $r + 15 && $g > $b + 15) {
-                $greenCount++;
-            }
-        }
-    }
-
-    imagedestroy($image);
-
-    if ($samples === 0) {
-        return null;
-    }
-
-    return [
-        $sumR / $samples,
-        $sumG / $samples,
-        $sumB / $samples,
-        $darkCount / $samples,
-        $greenCount / $samples,
     ];
 }

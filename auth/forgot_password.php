@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Same message whether or not the email exists, so accounts cannot be enumerated.
-    flash('success', 'If an account exists for that email, a password reset link has been sent.');
+    flash('success', t('forgot.sent'));
     if (DEMO_MODE && $demoLink) {
         $_SESSION['demo_reset_link'] = $demoLink;
     }
@@ -33,23 +33,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $demoLink = $_SESSION['demo_reset_link'] ?? null;
 unset($_SESSION['demo_reset_link']);
 
-$pageTitle = 'Forgot Password';
+$pageTitle = t('forgot.title');
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="card form-narrow">
-  <h1 class="mt-0">Forgot Password</h1>
+  <h1 class="mt-0"><?= te('forgot.title') ?></h1>
   <?php if ($demoLink): ?>
-    <div class="alert alert-info">Demo mode: <a href="<?= e($demoLink) ?>">click here to reset your password</a></div>
+    <div class="alert alert-info"><?= te('forgot.demo') ?> <a href="<?= e($demoLink) ?>"><?= te('forgot.demo_link') ?></a></div>
   <?php endif; ?>
-  <p class="muted">Enter your registered email address and we'll send you a link to reset your password.</p>
+  <p class="muted"><?= te('forgot.instructions') ?></p>
   <form class="stacked" method="post" action="">
     <?= csrf_field() ?>
-    <label>Email Address</label>
+    <label><?= te('form.email') ?></label>
     <input type="email" name="email" required autofocus>
-    <button type="submit" class="btn">Send Reset Link</button>
+    <button type="submit" class="btn"><?= te('forgot.button') ?></button>
   </form>
-  <p class="muted"><a href="<?= BASE_URL ?>/auth/login.php">&larr; Back to login</a></p>
+  <p class="muted"><a href="<?= BASE_URL ?>/auth/login.php">&larr; <?= te('forgot.back') ?></a></p>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

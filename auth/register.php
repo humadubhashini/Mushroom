@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/bootstrap.php';
 
 if (is_logged_in()) {
-    redirect('/index.php');
+    redirect(role_home(current_user()['role']));
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,27 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['old'] = compact('role', 'fullName', 'email', 'phone', 'businessName', 'address');
 
     $errors = [];
-    if (!in_array($role, ['farmer', 'buyer'], true)) {
-        $errors[] = 'Please select whether you are registering as a Farmer or a Buyer.';
-    }
-    if ($fullName === '') {
-        $errors[] = 'Full name is required.';
-    }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'A valid email address is required.';
-    }
-    if (strlen($password) < 6) {
-        $errors[] = 'Password must be at least 6 characters.';
-    }
-    if ($password !== $confirm) {
-        $errors[] = 'Passwords do not match.';
-    }
+    if (!in_array($role, ['farmer', 'buyer'], true)) $errors[] = t('register.err_role');
+    if ($fullName === '') $errors[] = t('register.err_name');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = t('register.err_email');
+    if (strlen($password) < 6) $errors[] = t('register.err_password');
+    if ($password !== $confirm) $errors[] = t('register.err_match');
 
     if (!$errors) {
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            $errors[] = 'An account with this email already exists.';
+            $errors[] = t('register.err_exists');
         }
     }
 
@@ -60,61 +50,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // FR-AUTH.2: the account stays unverified until the OTP is entered.
         $code = issue_otp($userId, $email);
         $_SESSION['pending_verification'] = $userId;
-        flash('success', 'Registration successful! Enter the 6-digit code sent to ' . $email . ' to verify your account.');
+        flash('success', t('register.success', ['email' => $email]));
         if (DEMO_MODE) {
-            flash('info', 'Demo mode: your verification code is ' . $code);
+            flash('info', t('otp.demo_code', ['code' => $code]));
         }
         redirect('/auth/verify.php');
-    } else {
-        flash('error', implode(' ', $errors));
     }
+    flash('error', implode(' ', $errors));
+    redirect('/auth/register.php');
 }
 
-$pageTitle = 'Register';
+$pageTitle = t('register.title');
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="card form-narrow">
-  <h1 class="mt-0">Create an Account</h1>
+  <h1 class="mt-0"><?= te('register.title') ?></h1>
   <form class="stacked" method="post" action="">
     <?= csrf_field() ?>
 
-    <label>I am registering as</label>
+    <label><?= te('register.as') ?></label>
     <select name="role" required>
-      <option value="">-- Select role --</option>
-      <option value="farmer" <?= old('role') === 'farmer' ? 'selected' : '' ?>>Farmer (I grow mushrooms)</option>
-      <option value="buyer" <?= old('role') === 'buyer' ? 'selected' : '' ?>>Buyer (Hotel / Restaurant)</option>
+      <option value=""><?= te('register.select_role') ?></option>
+      <option value="farmer" <?= old('role') === 'farmer' ? 'selected' : '' ?>><?= te('register.role_farmer') ?></option>
+      <option value="buyer" <?= old('role') === 'buyer' ? 'selected' : '' ?>><?= te('register.role_buyer') ?></option>
     </select>
 
-    <label>Full Name</label>
+    <label><?= te('form.full_name') ?></label>
     <input type="text" name="full_name" value="<?= old('fullName') ?>" required>
 
-    <label>Email Address</label>
+    <label><?= te('form.email') ?></label>
     <input type="email" name="email" value="<?= old('email') ?>" required>
 
-    <label>Phone Number</label>
+    <label><?= te('form.phone') ?></label>
     <input type="tel" name="phone" value="<?= old('phone') ?>">
 
-    <label>Farm Name / Business Name (optional)</label>
+    <label><?= te('register.business') ?></label>
     <input type="text" name="business_name" value="<?= old('businessName') ?>">
 
-    <label>Address</label>
+    <label><?= te('form.address') ?></label>
     <input type="text" name="address" value="<?= old('address') ?>">
 
     <div class="form-row">
       <div>
-        <label>Password</label>
+        <label><?= te('form.password') ?></label>
         <input type="password" name="password" required>
       </div>
       <div>
-        <label>Confirm Password</label>
+        <label><?= te('form.confirm_password') ?></label>
         <input type="password" name="confirm_password" required>
       </div>
     </div>
 
-    <button type="submit" class="btn">Register</button>
+    <button type="submit" class="btn"><?= te('register.button') ?></button>
   </form>
-  <p class="muted">Already have an account? <a href="<?= BASE_URL ?>/auth/login.php">Log in</a></p>
+  <p class="muted"><?= te('register.have_account') ?> <a href="<?= BASE_URL ?>/auth/login.php"><?= te('nav.login') ?></a></p>
 </div>
 
 <?php clear_old(); include __DIR__ . '/../includes/footer.php'; ?>

@@ -12,5 +12,5 @@ $id = (int) ($_POST['id'] ?? 0);
 $stmt = $pdo->prepare("UPDATE listings SET status = 'removed' WHERE id = ? AND farmer_id = ?");
 $stmt->execute([$id, $farmerId]);
 
-flash('success', 'Listing removed.');
+flash('success', t('listing.removed'));
 redirect('/farmer/listings.php');

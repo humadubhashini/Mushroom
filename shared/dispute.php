@@ -14,7 +14,7 @@ $order = $stmt->fetch();
 $back = $user['role'] === 'farmer' ? '/farmer/orders.php' : '/buyer/orders.php';
 
 if (!$order) {
-    flash('error', 'Order not found.');
+    flash('error', t('order.not_found'));
     redirect($back);
 }
 
@@ -26,44 +26,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $reason = trim($_POST['reason'] ?? '');
     if (strlen($reason) < 10) {
-        flash('error', 'Please describe the problem (at least 10 characters).');
+        flash('error', t('dispute.err_reason'));
         redirect('/shared/dispute.php?order_id=' . $orderId);
     }
     $pdo->prepare('INSERT INTO disputes (order_id, raised_by, reason) VALUES (?, ?, ?)')
         ->execute([$orderId, $user['id'], $reason]);
 
     $otherParty = $user['role'] === 'farmer' ? $order['buyer_id'] : $order['farmer_id'];
-    notify($otherParty, 'A dispute was raised on order #' . $orderId . '. An administrator will review it.', $user['role'] === 'farmer' ? '/buyer/orders.php' : '/farmer/orders.php');
+    notify($otherParty, 'notif.dispute_raised', $user['role'] === 'farmer' ? '/buyer/orders.php' : '/farmer/orders.php', ['order' => $orderId]);
     foreach ($pdo->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll() as $admin) {
         notify($admin['id'], 'New dispute on order #' . $orderId, '/admin/disputes.php');
     }
-    flash('success', 'Your dispute has been submitted to the administrator.');
+    flash('success', t('dispute.submitted'));
     redirect($back);
 }
 
-$pageTitle = 'Report a Problem';
+$pageTitle = t('common.report_problem');
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="card form-narrow">
-  <h1 class="mt-0">Report a Problem</h1>
-  <p class="muted">Order #<?= (int) $order['id'] ?> &mdash; <?= e($order['mushroom_type']) ?>, <?= e($order['quantity_kg']) ?> kg, <?= format_money($order['total_price']) ?> (<?= e(ucfirst($order['status'])) ?>)</p>
+  <h1 class="mt-0"><?= te('common.report_problem') ?></h1>
+  <p class="muted">Order #<?= (int) $order['id'] ?> &mdash; <?= e($order['mushroom_type']) ?>, <?= e($order['quantity_kg']) ?> kg, <?= format_money($order['total_price']) ?> (<?= e(status_label($order['status'])) ?>)</p>
 
   <?php foreach ($existing as $d): ?>
     <div class="alert <?= $d['status'] === 'open' ? 'alert-info' : 'alert-success' ?>">
-      <strong><?= e(ucfirst($d['status'])) ?>:</strong> <?= e($d['reason']) ?>
-      <?php if ($d['admin_response']): ?><br><em>Admin: <?= e($d['admin_response']) ?></em><?php endif; ?>
+      <strong><?= e(status_label($d['status'])) ?>:</strong> <?= e($d['reason']) ?>
+      <?php if ($d['admin_response']): ?><br><em><?= te('role.admin') ?>: <?= e($d['admin_response']) ?></em><?php endif; ?>
     </div>
   <?php endforeach; ?>
 
   <form class="stacked" method="post">
     <?= csrf_field() ?>
     <input type="hidden" name="order_id" value="<?= (int) $order['id'] ?>">
-    <label>Describe the issue (quality, quantity, payment, delivery...)</label>
+    <label><?= te('dispute.describe') ?></label>
     <textarea name="reason" required minlength="10"></textarea>
-    <button type="submit" class="btn">Submit Dispute</button>
+    <button type="submit" class="btn"><?= te('dispute.submit') ?></button>
   </form>
-  <p><a href="<?= BASE_URL . $back ?>">&larr; Back to orders</a></p>
+  <p><a href="<?= BASE_URL . $back ?>">&larr; <?= te('common.back') ?></a></p>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

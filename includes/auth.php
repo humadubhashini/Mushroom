@@ -29,7 +29,7 @@ function logout_user() {
 
 function require_login() {
     if (!is_logged_in()) {
-        flash('error', 'Please log in to continue.');
+        flash('error', t('auth.please_login'));
         redirect('/auth/login.php');
     }
 }
@@ -39,6 +39,6 @@ function require_role($role) {
     $roles = (array) $role;
     if (!in_array(current_user()['role'], $roles, true)) {
         http_response_code(403);
-        die('You do not have permission to access this page.');
+        die(e(t('auth.no_permission')));
     }
 }
