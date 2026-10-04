@@ -281,7 +281,7 @@ function mushroom_picture($type, $size = 150) {
 }
 
 /** SQL columns to join from mushroom_types (alias mt) for translated listing names. */
-const LISTING_TYPE_COLUMNS = 'mt.name_si AS mt_name_si, mt.name_ta AS mt_name_ta, mt.color AS mt_color';
+const LISTING_TYPE_COLUMNS = 'mt.name_si AS mt_name_si, mt.name_ta AS mt_name_ta, mt.color AS mt_color, mt.image AS mt_image';
 
 /** Listing title in the current language (catalogue name when the listing is linked to one). */
 function listing_title($listing) {
@@ -292,10 +292,16 @@ function listing_title($listing) {
     return $listing['mushroom_type'];
 }
 
-/** Listing photo, or the variety drawing when the farmer did not upload one. */
+/**
+ * Listing photo. When the farmer did not upload one, the photo of its mushroom
+ * type (Admin > Mushroom Types) is used, and failing that the built-in drawing.
+ */
 function listing_picture($listing, $size = 140) {
     if (!empty($listing['image'])) {
         return '<img src="' . BASE_URL . '/assets/uploads/listings/' . e($listing['image']) . '" alt="' . e(listing_title($listing)) . '">';
+    }
+    if (!empty($listing['mt_image'])) {
+        return '<img src="' . BASE_URL . '/assets/uploads/mushrooms/' . e($listing['mt_image']) . '" alt="' . e(listing_title($listing)) . '">';
     }
     return '<div class="pic-fallback">' . mushroom_picture(['name' => listing_title($listing), 'color' => $listing['mt_color'] ?? null], $size) . '</div>';
 }
