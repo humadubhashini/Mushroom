@@ -26,7 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$imageFile) {
         flash('error', t('diag.choose_photo'));
     } else {
-        $result = classify_mushroom_image(UPLOAD_DIAGNOSES . $imageFile);
+        $result = classify_mushroom_image(
+            UPLOAD_DIAGNOSES . $imageFile,
+            classify_parse_browser_features($_POST['browser_features'] ?? null)
+        );
 
         if (isset($result['error'])) {
             $analysisError = $result['error'];
@@ -91,13 +94,8 @@ include __DIR__ . '/../includes/header.php';
     <label><?= te('diag.step1') ?></label>
     <!-- capture="environment" opens the phone's rear camera directly (FR-AI.1) -->
     <input type="file" name="image" accept="image/jpeg,image/png,image/webp" capture="environment" required id="diagImage">
+    <input type="hidden" name="browser_features" id="browserFeatures" value="">
     <img id="diagPreview" alt="" style="display:none; max-width:100%; max-height:240px; margin-top:10px; border-radius:8px;">
-    <script>
-      document.getElementById('diagImage').addEventListener('change', function () {
-        var img = document.getElementById('diagPreview');
-        if (this.files && this.files[0]) { img.src = URL.createObjectURL(this.files[0]); img.style.display = 'block'; }
-      });
-    </script>
     <button type="submit" class="btn">🔍 <?= te('diag.step2') ?></button>
   </form>
   <p class="muted" style="font-size:0.85rem; margin-bottom:0;">💡 <?= te('diag.tips') ?></p>
@@ -152,4 +150,5 @@ include __DIR__ . '/../includes/header.php';
 
 <p style="margin-top:24px;"><a href="<?= BASE_URL ?>/farmer/diagnosis_history.php"><?= te('diag.history_link') ?> &rarr;</a></p>
 
+<script src="<?= BASE_URL ?>/assets/js/snap-detect.js"></script>
 <?php include __DIR__ . '/../includes/footer.php'; ?>

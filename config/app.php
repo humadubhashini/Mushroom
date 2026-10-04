@@ -27,6 +27,7 @@ function detect_base_url(): string {
 }
 define('BASE_URL', detect_base_url());
 define('APP_NAME', 'Mushroom Direct');
+define('APP_VERSION', '2.1');
 
 // Demo mode: XAMPP has no mail server configured by default, so OTP codes and
 // password-reset links are also shown on screen. Set to false once a real

@@ -34,6 +34,7 @@ A PHP/MySQL web application implementing the system described in the research pr
    /opt/lampp/htdocs/mushroom-system   (Linux)
    ```
    Any folder name works: the base URL is detected automatically.
+   Check that `index.php` sits directly inside the folder (`htdocs\mushroom-system\index.php`), not inside a second `mushroom-system` folder. The page footer shows the version number (e.g. `v2.1`) so you can confirm the update is live.
 2. **Start Apache and MySQL** from the XAMPP Control Panel.
 3. **Create the database**: open `http://localhost/phpmyadmin`, click **Import**, choose `database/schema.sql` and press **Go**. This creates the `mushroom_system` database with all tables and demo data.
    > Re-importing drops and recreates the database (fresh start).

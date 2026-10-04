@@ -18,7 +18,7 @@
 
 const AI_CLASSES = ['Healthy', 'Green Mold', 'Bacterial Blotch', 'Pest Attack'];
 
-function classify_mushroom_image(string $imagePath): array {
+function classify_mushroom_image(string $imagePath, ?array $browserFeatures = null): array {
     $diseases = classify_load_disease_map();
 
     if (AI_API_URL !== '') {
@@ -30,15 +30,42 @@ function classify_mushroom_image(string $imagePath): array {
         // AI service unreachable: fall back so farmers still get a result.
     }
 
-    if (!function_exists('imagecreatetruecolor')) {
-        return ['error' => 'gd_missing'];
+    // Prefer reading the photo on the server with GD. If XAMPP's GD extension
+    // is switched off, use the identical measurements taken by the browser
+    // (assets/js/snap-detect.js), so Snap & Detect works on any XAMPP setup.
+    $features = function_exists('imagecreatetruecolor') ? classify_extract_features($imagePath) : null;
+    $source = 'built-in colour analyser';
+    if ($features === null && $browserFeatures !== null) {
+        $features = $browserFeatures;
+        $source = 'built-in colour analyser (browser)';
     }
-
-    $features = classify_extract_features($imagePath);
     if ($features === null) {
-        return ['error' => 'unreadable'];
+        return ['error' => function_exists('imagecreatetruecolor') ? 'unreadable' : 'gd_missing'];
     }
+    return classify_from_features($features, $diseases, $source);
+}
 
+/**
+ * Validates the colour measurements posted by the browser (all ratios 0-1).
+ * Returns null when they are missing or malformed.
+ */
+function classify_parse_browser_features(?string $json): ?array {
+    $data = $json ? json_decode($json, true) : null;
+    if (!is_array($data)) {
+        return null;
+    }
+    $features = [];
+    foreach (['clean', 'green', 'blotch_in_cap', 'dark_in_cap'] as $key) {
+        if (!isset($data[$key]) || !is_numeric($data[$key])) {
+            return null;
+        }
+        $features[$key] = max(0.0, min(1.0, (float) $data[$key]));
+    }
+    return $features;
+}
+
+/** Turns colour measurements into a diagnosis with scores for all four classes. */
+function classify_from_features(array $features, array $diseases, string $source): array {
     // Not enough light mushroom tissue visible (e.g. a dark brown variety or a
     // photo of the bag/background): report a low-confidence result so an
     // expert reviews it, rather than guessing.
@@ -49,7 +76,7 @@ function classify_mushroom_image(string $imagePath): array {
             'confidence' => 40.0,
             'disease_id' => $diseases['Healthy'] ?? null,
             'scores' => $scores,
-            'model' => 'built-in colour analyser',
+            'model' => $source,
         ];
     }
 
@@ -77,7 +104,7 @@ function classify_mushroom_image(string $imagePath): array {
         'confidence' => $scores[$top],
         'disease_id' => $diseases[$top] ?? null,
         'scores' => $scores,
-        'model' => 'built-in colour analyser',
+        'model' => $source,
     ];
 }
 
