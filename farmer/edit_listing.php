@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = $_POST['quantity_kg'] ?? '';
     $price = $_POST['price_per_kg'] ?? '';
     $harvestDate = $_POST['harvest_date'] ?: null;
+    $location = trim($_POST['location'] ?? '');
     $status = $_POST['status'] ?? 'active';
 
     $errors = [];
@@ -35,10 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $image = $imageFile ?: $listing['image'];
         $stmt = $pdo->prepare(
-            'UPDATE listings SET mushroom_type=?, description=?, quantity_kg=?, price_per_kg=?, harvest_date=?, status=?, image=?
+            'UPDATE listings SET mushroom_type=?, description=?, quantity_kg=?, price_per_kg=?, harvest_date=?, location=?, status=?, image=?
              WHERE id = ? AND farmer_id = ?'
         );
-        $stmt->execute([$type, $description ?: null, $quantity, $price, $harvestDate, $status, $image, $id, $farmerId]);
+        $stmt->execute([$type, $description ?: null, $quantity, $price, $harvestDate, $location ?: null, $status, $image, $id, $farmerId]);
         flash('success', 'Listing updated.');
         redirect('/farmer/listings.php');
     } else {
@@ -74,6 +75,9 @@ include __DIR__ . '/../includes/header.php';
 
     <label>Harvest Date</label>
     <input type="date" name="harvest_date" value="<?= e($listing['harvest_date']) ?>">
+
+    <label>Location (District / Town)</label>
+    <input type="text" name="location" value="<?= e($listing['location']) ?>">
 
     <label>Status</label>
     <select name="status">

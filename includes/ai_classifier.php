@@ -18,10 +18,20 @@
 function classify_mushroom_image(string $imagePath): array {
     $diseases = classify_load_disease_map();
 
+    // Preferred path: the trained CNN served by ai_model/app.py (FR-AI.2, FR-AI.3).
+    if (AI_API_URL !== '') {
+        $remote = classify_via_cnn_api($imagePath);
+        if ($remote !== null) {
+            $remote['disease_id'] = $diseases[$remote['disease']] ?? null;
+            return $remote;
+        }
+        // If the AI service is down, fall back so farmers still get a result.
+    }
+
     $signature = classify_extract_color_signature($imagePath);
     if ($signature === null) {
         // Image could not be read (corrupt file); default to a low-confidence Healthy guess.
-        return ['disease' => 'Healthy', 'confidence' => 40.0, 'disease_id' => $diseases['Healthy'] ?? null];
+        return ['disease' => 'Healthy', 'confidence' => 40.0, 'disease_id' => $diseases['Healthy'] ?? null, 'model' => 'php-colour-heuristic'];
     }
 
     [$avgR, $avgG, $avgB, $darkRatio, $greenRatio] = $signature;
@@ -46,6 +56,38 @@ function classify_mushroom_image(string $imagePath): array {
         'disease' => $topDisease,
         'confidence' => $confidence,
         'disease_id' => $diseases[$topDisease] ?? null,
+        'model' => 'php-colour-heuristic',
+    ];
+}
+
+/**
+ * Sends the image to the Python CNN inference API and returns
+ * ['disease' => string, 'confidence' => float, 'model' => string], or null on failure.
+ */
+function classify_via_cnn_api(string $imagePath): ?array {
+    if (!function_exists('curl_init')) {
+        return null;
+    }
+    $ch = curl_init(AI_API_URL);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => ['image' => new CURLFile($imagePath)],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 10, // NFR-PERF.1: result within 10 seconds
+    ]);
+    $body = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = $body ? json_decode($body, true) : null;
+    if ($status !== 200 || !isset($data['disease'], $data['confidence'])) {
+        return null;
+    }
+    return [
+        'disease' => (string) $data['disease'],
+        'confidence' => round((float) $data['confidence'], 1),
+        'model' => (string) ($data['model'] ?? 'cnn'),
     ];
 }
 

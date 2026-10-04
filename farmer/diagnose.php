@@ -22,15 +22,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lowConfidence = $result['confidence'] < AI_LOW_CONFIDENCE_THRESHOLD ? 1 : 0;
 
         $stmt = $pdo->prepare(
-            'INSERT INTO diagnoses (farmer_id, image, predicted_disease_id, confidence, low_confidence_flag)
-             VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO diagnoses (farmer_id, image, predicted_disease_id, confidence, low_confidence_flag, model_version)
+             VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$farmerId, $imageFile, $result['disease_id'], $result['confidence'], $lowConfidence]);
+        $stmt->execute([$farmerId, $imageFile, $result['disease_id'], $result['confidence'], $lowConfidence, $result['model'] ?? null]);
+        $diagnosisId = $pdo->lastInsertId();
 
         if ($result['disease_id']) {
             $stmt = $pdo->prepare('SELECT * FROM disease_types WHERE id = ?');
             $stmt->execute([$result['disease_id']]);
             $disease = $stmt->fetch();
+        }
+        notify($farmerId, 'Your Snap & Detect result is ready: ' . $result['disease'] . ' (' . $result['confidence'] . '% confidence).', '/farmer/diagnosis_history.php');
+        if ($lowConfidence) {
+            foreach ($pdo->query("SELECT id FROM users WHERE role IN ('admin','expert') AND status = 'active'")->fetchAll() as $reviewer) {
+                notify($reviewer['id'], 'Low-confidence diagnosis #' . $diagnosisId . ' needs expert review.', '/admin/diagnoses.php?filter=unreviewed');
+            }
         }
         $result['image'] = $imageFile;
         $result['low_confidence'] = $lowConfidence;
@@ -56,9 +63,17 @@ Accuracy may be reduced in low-light growing houses (see SRS Section 5.7).</p>
 <div class="card form-narrow">
   <form class="stacked" method="post" action="" enctype="multipart/form-data">
     <?= csrf_field() ?>
-    <label>Mushroom / Growing Bed Photo</label>
-    <input type="file" name="image" accept="image/*" required>
-    <button type="submit" class="btn">Diagnose Now</button>
+    <label>Step 1 &mdash; Take or choose a photo of the mushroom / growing bed</label>
+    <!-- capture="environment" opens the phone's rear camera directly (FR-AI.1) -->
+    <input type="file" name="image" accept="image/*" capture="environment" required id="diagImage">
+    <img id="diagPreview" alt="" style="display:none; max-width:100%; max-height:240px; margin-top:10px; border-radius:8px;">
+    <script>
+      document.getElementById('diagImage').addEventListener('change', function () {
+        var img = document.getElementById('diagPreview');
+        if (this.files && this.files[0]) { img.src = URL.createObjectURL(this.files[0]); img.style.display = 'block'; }
+      });
+    </script>
+    <button type="submit" class="btn">Step 2 &mdash; 🔍 Diagnose Now</button>
   </form>
 </div>
 
@@ -71,7 +86,7 @@ Accuracy may be reduced in low-light growing houses (see SRS Section 5.7).</p>
         <p>Confidence: <strong><?= e($result['confidence']) ?>%</strong></p>
         <div class="confidence-bar"><div class="confidence-bar-fill" style="width: <?= e($result['confidence']) ?>%;"></div></div>
         <?php if ($result['low_confidence']): ?>
-          <p style="color:#d9822b;"><strong>⚠ Low confidence result.</strong> Please consult an agricultural expert to confirm this diagnosis (FR-AI.6).</p>
+          <p style="color:#d9822b;"><strong>⚠ Low confidence result.</strong> This case has been sent to our agricultural experts for review &mdash; you'll get a notification with their advice. You can also consult your local agriculture extension officer.</p>
         <?php endif; ?>
 
         <?php if ($disease): ?>

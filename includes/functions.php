@@ -104,3 +104,78 @@ function format_date($date) {
     }
     return date('d M Y', strtotime($date));
 }
+
+/**
+ * Creates an in-app notification for a user (FR-MKT.5, FR-NOT.1 - FR-NOT.3).
+ */
+function notify($userId, $message, $link = null) {
+    global $pdo;
+    $pdo->prepare('INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)')
+        ->execute([$userId, $message, $link]);
+}
+
+function unread_notification_count() {
+    global $pdo;
+    $user = current_user();
+    if (!$user) {
+        return 0;
+    }
+    $stmt = $pdo->prepare('SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND is_read = 0');
+    $stmt->execute([$user['id']]);
+    return (int) $stmt->fetch()['c'];
+}
+
+/**
+ * Records an administrative action for auditability (NFR-SEC.5).
+ */
+function log_admin_action($action) {
+    global $pdo;
+    $user = current_user();
+    if ($user) {
+        $pdo->prepare('INSERT INTO admin_logs (admin_id, action) VALUES (?, ?)')->execute([$user['id'], $action]);
+    }
+}
+
+/**
+ * Sends an email when PHP mail is configured; failures are ignored because
+ * XAMPP has no mail server by default (DEMO_MODE shows codes on screen instead).
+ */
+function send_email($to, $subject, $body) {
+    return @mail($to, $subject, $body, 'From: no-reply@mushroomdirect.lk');
+}
+
+/**
+ * Generates a 6-digit OTP for the user, stores its hash, and emails it (FR-AUTH.2).
+ * Returns the plain code so DEMO_MODE can display it.
+ */
+function issue_otp($userId, $email) {
+    global $pdo;
+    $code = (string) random_int(100000, 999999);
+    $pdo->prepare('UPDATE users SET otp_code = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?')
+        ->execute([password_hash($code, PASSWORD_DEFAULT), OTP_TTL_MINUTES, $userId]);
+    send_email($email, APP_NAME . ' verification code', "Your verification code is $code. It expires in " . OTP_TTL_MINUTES . ' minutes.');
+    return $code;
+}
+
+/**
+ * Text lookup for i18n readiness (NFR-LOC.2). UI strings live in lang/<code>.php
+ * so Sinhala (si) and Tamil (ta) files can be added later without code changes.
+ */
+function t($key) {
+    static $strings = null;
+    if ($strings === null) {
+        $lang = $_SESSION['lang'] ?? 'en';
+        $file = __DIR__ . '/../lang/' . basename($lang) . '.php';
+        $strings = is_file($file) ? require $file : require __DIR__ . '/../lang/en.php';
+    }
+    return $strings[$key] ?? $key;
+}
+
+function role_home($role) {
+    return match ($role) {
+        'farmer' => '/farmer/dashboard.php',
+        'buyer' => '/buyer/dashboard.php',
+        'admin', 'expert' => '/admin/dashboard.php',
+        default => '/index.php',
+    };
+}

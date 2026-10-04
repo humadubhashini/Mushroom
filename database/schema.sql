@@ -4,7 +4,10 @@
 -- Database schema for XAMPP (MySQL / MariaDB)
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS mushroom_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- NOTE: importing this file drops and recreates the mushroom_system database
+-- (fresh install). Back up any existing data first.
+DROP DATABASE IF EXISTS mushroom_system;
+CREATE DATABASE mushroom_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE mushroom_system;
 
 -- ------------------------------------------------------------
@@ -13,7 +16,7 @@ USE mushroom_system;
 -- ------------------------------------------------------------
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  role ENUM('farmer','buyer','admin') NOT NULL,
+  role ENUM('farmer','buyer','admin','expert') NOT NULL,
   full_name VARCHAR(150) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   phone VARCHAR(20),
@@ -22,6 +25,10 @@ CREATE TABLE users (
   address VARCHAR(255),
   profile_image VARCHAR(255),
   is_verified TINYINT(1) NOT NULL DEFAULT 0,
+  otp_code VARCHAR(255) NULL COMMENT 'Hashed one-time verification code (FR-AUTH.2)',
+  otp_expires_at DATETIME NULL,
+  reset_token VARCHAR(255) NULL COMMENT 'Hashed password-reset token (FR-AUTH.4)',
+  reset_expires_at DATETIME NULL,
   status ENUM('active','suspended') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -38,6 +45,7 @@ CREATE TABLE listings (
   quantity_kg DECIMAL(10,2) NOT NULL,
   price_per_kg DECIMAL(10,2) NOT NULL,
   harvest_date DATE NULL,
+  location VARCHAR(100) NULL COMMENT 'District / town of the farm (FR-MKT.3 filter)',
   image VARCHAR(255),
   status ENUM('active','sold_out','removed') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -76,6 +84,7 @@ CREATE TABLE payments (
   method VARCHAR(50) NOT NULL DEFAULT 'card',
   gateway_reference VARCHAR(100),
   status ENUM('success','failed','pending') NOT NULL DEFAULT 'pending',
+  failure_reason VARCHAR(255) NULL,
   paid_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
@@ -104,9 +113,15 @@ CREATE TABLE diagnoses (
   predicted_disease_id INT NULL,
   confidence DECIMAL(5,2) NOT NULL,
   low_confidence_flag TINYINT(1) NOT NULL DEFAULT 0,
+  model_version VARCHAR(50) NULL COMMENT 'Which classifier produced the result',
+  reviewed_disease_id INT NULL COMMENT 'Expert-confirmed label (useful for CNN retraining)',
+  expert_note TEXT NULL,
+  reviewed_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (farmer_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (predicted_disease_id) REFERENCES disease_types(id)
+  FOREIGN KEY (predicted_disease_id) REFERENCES disease_types(id),
+  FOREIGN KEY (reviewed_disease_id) REFERENCES disease_types(id),
+  FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -148,6 +163,49 @@ CREATE TABLE reviews (
   FOREIGN KEY (farmer_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
+-- ------------------------------------------------------------
+-- In-app notifications
+-- Covers FR-MKT.5, FR-NOT.1 - FR-NOT.3
+-- ------------------------------------------------------------
+CREATE TABLE notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  message VARCHAR(255) NOT NULL,
+  link VARCHAR(255) NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- Order / payment disputes between farmer and buyer
+-- Covers FR-ADM.4
+-- ------------------------------------------------------------
+CREATE TABLE disputes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  raised_by INT NOT NULL,
+  reason TEXT NOT NULL,
+  status ENUM('open','resolved','rejected') NOT NULL DEFAULT 'open',
+  admin_response TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  resolved_at TIMESTAMP NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (raised_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- Audit log of administrative actions
+-- Covers NFR-SEC.5
+-- ------------------------------------------------------------
+CREATE TABLE admin_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  action VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- ============================================================
 -- Seed data
 -- ============================================================
@@ -157,6 +215,24 @@ INSERT INTO users (role, full_name, email, phone, password_hash, is_verified, st
 VALUES ('admin', 'System Administrator', 'admin@mushroom.lk', '0770000000',
 '$2y$12$NOeTd0910OqmU8U4Bncq5uKGA7ZUDMXBxTzln9MfVRTyZcHM1/4Ai', 1, 'active');
 -- NOTE: the hash above is bcrypt for 'Admin@123'. Change this password after first login.
+
+-- Demo accounts for testing / viva demonstration
+--   farmer@mushroom.lk / Farmer@123
+--   buyer@mushroom.lk  / Buyer@123
+--   expert@mushroom.lk / Expert@123  (Agricultural Expert / Content Contributor)
+INSERT INTO users (role, full_name, email, phone, password_hash, business_name, address, is_verified, status) VALUES
+('farmer', 'Sunil Perera', 'farmer@mushroom.lk', '0771234567',
+ '$2y$10$3VNXD.zfOjOgoeT4VRt.G.UWGnQ/en0Im340VRsLy0FbxsEmY60Ay', 'Perera Mushroom Farm', 'Gampaha', 1, 'active'),
+('buyer', 'Nimali Fernando', 'buyer@mushroom.lk', '0712345678',
+ '$2y$10$Luu5dRmLzkSeHm0/QROdGOhcZHlOYksvDcJMuApx6c5tyvzoKayWm', 'Ocean View Hotel', 'Colombo 03', 1, 'active'),
+('expert', 'Dr. Kamal Silva', 'expert@mushroom.lk', '0759876543',
+ '$2y$10$ygd5e3VkspGEpVzYGZKiHeyiA8nQUayTgK3uvA/Lwi.0lB8bMIbye', 'Department of Agriculture', 'Peradeniya', 1, 'active');
+
+-- Demo marketplace listings (farmer id = 2)
+INSERT INTO listings (farmer_id, mushroom_type, description, quantity_kg, price_per_kg, harvest_date, location) VALUES
+(2, 'Oyster Mushroom', 'Fresh American oyster mushrooms, grown on sawdust substrate without chemicals.', 120, 650, CURDATE(), 'Gampaha'),
+(2, 'Abalone Mushroom', 'Firm-textured abalone mushrooms, ideal for hotel kitchens.', 40, 900, CURDATE(), 'Gampaha'),
+(2, 'Button Mushroom', 'Clean white button mushrooms, graded and packed in 1kg trays.', 60, 1200, CURDATE(), 'Gampaha');
 
 -- Disease catalogue used by the AI classifier and treatment engine
 INSERT INTO disease_types (name, description, treatment, pesticide_recommendation) VALUES
@@ -177,11 +253,14 @@ INSERT INTO disease_types (name, description, treatment, pesticide_recommendatio
 INSERT INTO tutorial_categories (name) VALUES
 ('House Preparation'), ('Spawning / Seeding'), ('Disease Prevention'), ('Harvesting'), ('Post-Harvest Handling');
 
--- Sample tutorials (video_url can point to any hosted video, e.g. YouTube embed link)
+-- Sample tutorials. video_url may be a YouTube *embed* link (shown inline) or any
+-- other link (shown as a "Watch video" button). Replace these with the expert
+-- videos recorded for the project via Admin > Manage Tutorials.
 INSERT INTO tutorials (category_id, title, description, video_url, related_disease_id) VALUES
-(1, 'Preparing a Mushroom House from Scratch', 'Step-by-step guide to setting up a hygienic, climate-controlled mushroom growing house.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', NULL),
-(2, 'Spawning Oyster Mushroom Substrate', 'How to correctly inoculate substrate bags with mushroom spawn for high yield.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', NULL),
-(3, 'Preventing Green Mold Contamination', 'Practical hygiene steps to prevent Trichoderma (green mold) outbreaks in your growing room.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', 2),
-(3, 'Controlling Bacterial Blotch', 'Managing humidity and airflow to prevent bacterial blotch on mushroom caps.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', 3),
-(4, 'Harvesting Mushrooms at the Right Time', 'How to identify the optimal harvest window for maximum quality and shelf life.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', NULL),
-(5, 'Post-Harvest Storage and Packaging', 'Best practices for storing and packaging mushrooms before sale to maintain freshness.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', NULL);
+(1, 'Preparing a Mushroom House from Scratch', 'Step-by-step guide to setting up a hygienic, climate-controlled mushroom growing house.', 'https://www.youtube.com/results?search_query=mushroom+house+preparation+sri+lanka', NULL),
+(2, 'Spawning Oyster Mushroom Substrate', 'How to correctly inoculate substrate bags with mushroom spawn for high yield.', 'https://www.youtube.com/results?search_query=oyster+mushroom+spawning+bags', NULL),
+(3, 'Preventing Green Mold Contamination', 'Practical hygiene steps to prevent Trichoderma (green mold) outbreaks in your growing room.', 'https://www.youtube.com/results?search_query=trichoderma+green+mold+mushroom+prevention', 2),
+(3, 'Controlling Bacterial Blotch', 'Managing humidity and airflow to prevent bacterial blotch on mushroom caps.', 'https://www.youtube.com/results?search_query=bacterial+blotch+mushroom+control', 3),
+(3, 'Managing Sciarid Flies and Mites', 'Using screens, sticky traps and hygiene to keep pests out of the mushroom house.', 'https://www.youtube.com/results?search_query=mushroom+sciarid+fly+control', 4),
+(4, 'Harvesting Mushrooms at the Right Time', 'How to identify the optimal harvest window for maximum quality and shelf life.', 'https://www.youtube.com/results?search_query=when+to+harvest+oyster+mushrooms', NULL),
+(5, 'Post-Harvest Storage and Packaging', 'Best practices for storing and packaging mushrooms before sale to maintain freshness.', 'https://www.youtube.com/results?search_query=mushroom+post+harvest+packaging', NULL);

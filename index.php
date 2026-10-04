@@ -8,7 +8,8 @@ include __DIR__ . '/includes/header.php';
   <h1>Direct Market Access for Sri Lankan Mushroom Farmers</h1>
   <p>Sell straight to hotels and restaurants without middlemen, and diagnose crop diseases instantly with AI-powered "Snap &amp; Detect".</p>
   <a href="<?= BASE_URL ?>/buyer/marketplace.php" class="btn">Browse Marketplace</a>
-  <a href="<?= BASE_URL ?>/auth/register.php" class="btn btn-outline">Join as a Farmer</a>
+  <a href="<?= BASE_URL ?>/auth/register.php" class="btn btn-outline" style="color:#fff; border-color:#fff;">Join Now</a>
+  <a href="<?= BASE_URL ?>/help.php" class="btn btn-outline" style="color:#fff; border-color:#fff;">How it works</a>
 </section>
 
 <div class="feature-grid">

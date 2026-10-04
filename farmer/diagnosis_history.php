@@ -4,9 +4,10 @@ require_role('farmer');
 $farmerId = current_user()['id'];
 
 $stmt = $pdo->prepare(
-    'SELECT d.*, dt.name AS disease_name
+    'SELECT d.*, dt.name AS disease_name, rd.name AS reviewed_name
      FROM diagnoses d
      LEFT JOIN disease_types dt ON dt.id = d.predicted_disease_id
+     LEFT JOIN disease_types rd ON rd.id = d.reviewed_disease_id
      WHERE d.farmer_id = ?
      ORDER BY d.created_at DESC'
 );
@@ -30,6 +31,12 @@ include __DIR__ . '/../includes/header.php';
           <h3 style="margin:0 0 4px;"><?= e($d['disease_name'] ?? 'Unknown') ?></h3>
           <p class="muted">Confidence: <?= e($d['confidence']) ?>%<?= $d['low_confidence_flag'] ? ' &mdash; low confidence' : '' ?></p>
           <p class="muted"><?= format_date($d['created_at']) ?></p>
+          <?php if ($d['reviewed_by']): ?>
+            <div class="alert alert-info" style="margin:8px 0 0;">👩‍🔬 Expert review: <strong><?= e($d['reviewed_name']) ?></strong>
+              <?php if ($d['expert_note']): ?><br><?= e($d['expert_note']) ?><?php endif; ?></div>
+          <?php elseif ($d['low_confidence_flag']): ?>
+            <p class="muted" style="font-size:0.85rem;">⏳ Waiting for expert review</p>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>

@@ -47,18 +47,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $stmt = $pdo->prepare(
             'INSERT INTO users (role, full_name, email, phone, password_hash, business_name, address, is_verified)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
         );
-        // is_verified = 1 for the demo environment; in production this would start at 0
-        // pending an email/OTP verification step (FR-AUTH.2).
         $stmt->execute([
             $role, $fullName, $email, $phone,
             password_hash($password, PASSWORD_BCRYPT),
             $businessName ?: null, $address ?: null,
         ]);
+        $userId = (int) $pdo->lastInsertId();
         clear_old();
-        flash('success', 'Registration successful! You can now log in.');
-        redirect('/auth/login.php');
+
+        // FR-AUTH.2: the account stays unverified until the OTP is entered.
+        $code = issue_otp($userId, $email);
+        $_SESSION['pending_verification'] = $userId;
+        flash('success', 'Registration successful! Enter the 6-digit code sent to ' . $email . ' to verify your account.');
+        if (DEMO_MODE) {
+            flash('info', 'Demo mode: your verification code is ' . $code);
+        }
+        redirect('/auth/verify.php');
     } else {
         flash('error', implode(' ', $errors));
     }

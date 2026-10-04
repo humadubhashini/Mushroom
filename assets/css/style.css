@@ -218,3 +218,35 @@ table.data-table th { background: #eef4ef; color: var(--green-dark); }
   .main-nav a { margin: 0 12px 8px 0; display: inline-block; }
   .form-row { flex-direction: column; }
 }
+
+/* Notifications */
+.notif-count {
+  display: inline-block; background: var(--danger); color: #fff; border-radius: 999px;
+  font-size: 0.7rem; padding: 1px 6px; margin-left: 2px; vertical-align: top;
+}
+.notif-list { list-style: none; padding: 0; margin: 0; }
+.notif-list li { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--card); }
+.notif-list li.unread { background: #f2faf5; font-weight: 600; }
+.notif-list .time { font-size: 0.8rem; color: var(--muted); font-weight: normal; }
+
+/* Demo-mode info box */
+.alert-info { background: #e8f1fb; color: #1f4e79; border: 1px solid #b9d3ee; }
+
+/* Receipt */
+.receipt { max-width: 640px; margin: 0 auto; }
+.receipt table { width: 100%; border-collapse: collapse; }
+.receipt td { padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.receipt td:last-child { text-align: right; }
+@media print {
+  .site-header, .site-footer, .no-print { display: none !important; }
+  body { background: #fff; }
+}
+
+/* Report bars */
+.bar-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.bar-row .bar-label { width: 150px; font-size: 0.9rem; }
+.bar-row .bar { flex: 1; background: #e0e6e1; border-radius: 6px; height: 14px; overflow: hidden; }
+.bar-row .bar span { display: block; height: 100%; background: var(--green); }
+.bar-row .bar-value { width: 90px; text-align: right; font-size: 0.85rem; }
+
+.stars { color: #e0a800; letter-spacing: 1px; }

@@ -11,3 +11,8 @@ assets/uploads/tutorials/*
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# AI model training artefacts
+ai_model/dataset/
+ai_model/*.keras
+ai_model/__pycache__/

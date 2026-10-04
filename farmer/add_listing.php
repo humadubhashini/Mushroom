@@ -2,6 +2,9 @@
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_role('farmer');
 $farmerId = current_user()['id'];
+$addr = $pdo->prepare('SELECT address FROM users WHERE id = ?');
+$addr->execute([$farmerId]);
+$farmerAddress = $addr->fetch()['address'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -11,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = $_POST['quantity_kg'] ?? '';
     $price = $_POST['price_per_kg'] ?? '';
     $harvestDate = $_POST['harvest_date'] ?: null;
+    $location = trim($_POST['location'] ?? '');
 
     $errors = [];
     if ($type === '') $errors[] = 'Mushroom type is required.';
@@ -23,10 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $stmt = $pdo->prepare(
-            'INSERT INTO listings (farmer_id, mushroom_type, description, quantity_kg, price_per_kg, harvest_date, image)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO listings (farmer_id, mushroom_type, description, quantity_kg, price_per_kg, harvest_date, location, image)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$farmerId, $type, $description ?: null, $quantity, $price, $harvestDate, $imageFile]);
+        $stmt->execute([$farmerId, $type, $description ?: null, $quantity, $price, $harvestDate, $location ?: null, $imageFile]);
         flash('success', 'Listing created successfully.');
         redirect('/farmer/listings.php');
     } else {
@@ -62,6 +66,9 @@ include __DIR__ . '/../includes/header.php';
 
     <label>Harvest Date</label>
     <input type="date" name="harvest_date">
+
+    <label>Location (District / Town)</label>
+    <input type="text" name="location" placeholder="e.g. Kurunegala" value="<?= e($farmerAddress) ?>">
 
     <label>Photo</label>
     <input type="file" name="image" accept="image/*">

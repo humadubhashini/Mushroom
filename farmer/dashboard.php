@@ -30,6 +30,18 @@ $recentOrders = $pdo->prepare(
 $recentOrders->execute([$farmerId]);
 $recentOrders = $recentOrders->fetchAll();
 
+// FR-EDU.4: recommend tutorials based on the farmer's most recent diagnosis.
+$lastDiag = $pdo->prepare('SELECT d.predicted_disease_id, dt.name FROM diagnoses d LEFT JOIN disease_types dt ON dt.id = d.predicted_disease_id
+                           WHERE d.farmer_id = ? ORDER BY d.created_at DESC, d.id DESC LIMIT 1');
+$lastDiag->execute([$farmerId]);
+$lastDiag = $lastDiag->fetch();
+$recommended = [];
+if ($lastDiag && $lastDiag['predicted_disease_id']) {
+    $rec = $pdo->prepare('SELECT id, title FROM tutorials WHERE related_disease_id = ? LIMIT 3');
+    $rec->execute([$lastDiag['predicted_disease_id']]);
+    $recommended = $rec->fetchAll();
+}
+
 $pageTitle = 'Farmer Dashboard';
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -49,6 +61,18 @@ include __DIR__ . '/../includes/header.php';
   <a href="<?= BASE_URL ?>/farmer/orders.php" class="btn btn-outline">View Orders</a>
   <a href="<?= BASE_URL ?>/knowledge/index.php" class="btn btn-outline">Knowledge Hub</a>
 </div>
+
+<?php if ($recommended): ?>
+  <div class="card" style="margin-bottom:24px;">
+    <h2 class="mt-0">🎓 Recommended for you</h2>
+    <p class="muted">Based on your last diagnosis (<?= e($lastDiag['name']) ?>):</p>
+    <ul>
+      <?php foreach ($recommended as $r): ?>
+        <li><a href="<?= BASE_URL ?>/knowledge/view.php?id=<?= (int) $r['id'] ?>"><?= e($r['title']) ?></a></li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+<?php endif; ?>
 
 <h2>Recent Orders</h2>
 <?php if (!$recentOrders): ?>

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-require_role('admin');
+require_role(['admin', 'expert']);
 
 $stmt = $pdo->query(
     'SELECT t.*, c.name AS category_name FROM tutorials t LEFT JOIN tutorial_categories c ON c.id = t.category_id
@@ -26,7 +26,11 @@ include __DIR__ . '/../includes/header.php';
       <td><?= format_date($t['created_at']) ?></td>
       <td>
         <a href="<?= BASE_URL ?>/admin/edit_tutorial.php?id=<?= (int) $t['id'] ?>" class="btn btn-small btn-outline">Edit</a>
-        <a href="<?= BASE_URL ?>/admin/delete_tutorial.php?id=<?= (int) $t['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Delete this tutorial?')">Delete</a>
+        <form method="post" action="<?= BASE_URL ?>/admin/delete_tutorial.php" style="display:inline">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
+          <button type="submit" class="btn btn-small btn-danger" onclick="return confirm('Delete this tutorial?')">Delete</button>
+        </form>
       </td>
     </tr>
   <?php endforeach; ?>

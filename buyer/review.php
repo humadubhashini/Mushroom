@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $pdo->prepare('INSERT INTO reviews (order_id, buyer_id, farmer_id, rating, comment) VALUES (?, ?, ?, ?, ?)')
             ->execute([$order['id'], $buyerId, $order['farmer_id'], $rating, $comment ?: null]);
+        notify($order['farmer_id'], 'You received a ' . $rating . '-star review for order #' . $order['id'] . '.', '/shared/profile.php');
         flash('success', 'Thank you for your feedback!');
         redirect('/buyer/orders.php');
     }

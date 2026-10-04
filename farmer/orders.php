@@ -15,12 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($order) {
         if ($action === 'confirm' && $order['status'] === 'pending') {
             $pdo->prepare("UPDATE orders SET status = 'confirmed' WHERE id = ?")->execute([$orderId]);
+            notify($order['buyer_id'], 'Order #' . $orderId . ' was confirmed by the farmer. Please complete the payment.', '/buyer/payment.php?order_id=' . $orderId);
             flash('success', 'Order confirmed. The buyer can now proceed to payment.');
         } elseif ($action === 'complete' && $order['status'] === 'paid') {
             $pdo->prepare("UPDATE orders SET status = 'completed' WHERE id = ?")->execute([$orderId]);
+            notify($order['buyer_id'], 'Order #' . $orderId . ' has been marked as completed. Please rate the farmer.', '/buyer/review.php?order_id=' . $orderId);
             flash('success', 'Order marked as completed.');
         } elseif ($action === 'cancel' && in_array($order['status'], ['pending', 'confirmed'], true)) {
+            $pdo->beginTransaction();
             $pdo->prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?")->execute([$orderId]);
+            // Return the reserved quantity to the listing.
+            $pdo->prepare("UPDATE listings SET quantity_kg = quantity_kg + ?, status = IF(status = 'sold_out', 'active', status) WHERE id = ?")
+                ->execute([$order['quantity_kg'], $order['listing_id']]);
+            $pdo->commit();
+            notify($order['buyer_id'], 'Order #' . $orderId . ' was cancelled by the farmer.', '/buyer/orders.php');
             flash('success', 'Order cancelled.');
         }
     }
@@ -75,9 +83,11 @@ include __DIR__ . '/../includes/header.php';
               <input type="hidden" name="order_id" value="<?= (int) $o['id'] ?>">
               <button type="submit" name="action" value="complete" class="btn btn-small">Mark Completed</button>
             </form>
-          <?php else: ?>
-            <span class="muted">&mdash;</span>
           <?php endif; ?>
+          <?php if (in_array($o['status'], ['paid', 'completed'], true)): ?>
+            <a href="<?= BASE_URL ?>/shared/receipt.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small btn-outline">Receipt</a>
+          <?php endif; ?>
+          <a href="<?= BASE_URL ?>/shared/dispute.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small btn-outline" title="Report a problem">⚠</a>
         </td>
       </tr>
     <?php endforeach; ?>

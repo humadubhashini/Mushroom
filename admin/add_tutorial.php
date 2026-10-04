@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-require_role('admin');
+require_role(['admin', 'expert']);
 
 $categories = $pdo->query('SELECT * FROM tutorial_categories ORDER BY name')->fetchAll();
 $diseases = $pdo->query('SELECT * FROM disease_types ORDER BY name')->fetchAll();
@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'INSERT INTO tutorials (category_id, title, description, video_url, thumbnail, related_disease_id)
              VALUES (?, ?, ?, ?, ?, ?)'
         )->execute([$categoryId, $title, $description ?: null, $videoUrl, $thumbFile, $relatedDiseaseId]);
+        log_admin_action('Added tutorial: ' . $title);
         flash('success', 'Tutorial added.');
         redirect('/admin/tutorials.php');
     } else {

@@ -5,7 +5,13 @@ require_role('admin');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $listingId = (int) ($_POST['listing_id'] ?? 0);
-    $pdo->prepare("UPDATE listings SET status = 'removed' WHERE id = ?")->execute([$listingId]);
+    $stmt = $pdo->prepare('SELECT farmer_id, mushroom_type FROM listings WHERE id = ?');
+    $stmt->execute([$listingId]);
+    if ($listing = $stmt->fetch()) {
+        $pdo->prepare("UPDATE listings SET status = 'removed' WHERE id = ?")->execute([$listingId]);
+        log_admin_action('Removed listing #' . $listingId . ' (' . $listing['mushroom_type'] . ')');
+        notify($listing['farmer_id'], 'Your listing "' . $listing['mushroom_type'] . '" was removed by an administrator for violating platform policy.', '/farmer/listings.php');
+    }
     flash('success', 'Listing removed.');
     redirect('/admin/listings.php');
 }

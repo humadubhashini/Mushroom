@@ -6,16 +6,19 @@ A PHP/MySQL web application implementing the system described in the research pr
 
 ## Features (mapped to the SRS)
 
-| Module | SRS Requirements |
-|---|---|
-| Registration, login, role-based access (Farmer / Buyer / Admin) | FR-AUTH.1 – FR-AUTH.6 |
-| Direct B2B marketplace (list, search, order) | FR-MKT.1 – FR-MKT.7 |
-| Simulated secure payment gateway | FR-PAY.1 – FR-PAY.5 |
-| AI "Snap & Detect" disease diagnosis | FR-AI.1 – FR-AI.6 |
-| Treatment & pesticide recommendations | FR-REC.1 – FR-REC.3 |
-| Knowledge Hub video tutorials | FR-EDU.1 – FR-EDU.4 |
-| Admin panel (users, listings, tutorials, AI log) | FR-ADM.1 – FR-ADM.4 |
-| Order/payment notifications (in-app flash messages) | FR-NOT.1 – FR-NOT.3 |
+| Module | Pages | SRS Requirements |
+|---|---|---|
+| Registration, OTP email verification, login, password reset, profile, role-based access (Farmer / Buyer / Admin / Agricultural Expert) | `auth/*`, `shared/profile.php` | FR-AUTH.1 – FR-AUTH.6, NFR-SEC.2, NFR-SEC.4 |
+| Direct B2B marketplace: list, edit, remove, search/filter by type, location, quantity, price; bulk orders; order status; ratings & reviews | `farmer/*listing*`, `buyer/*` | FR-MKT.1 – FR-MKT.7 |
+| Secure payment gateway (card / bank transfer / mobile wallet), digital receipts, transaction history, failure handling without double charging | `buyer/payment.php`, `shared/receipt.php`, `shared/transactions.php` | FR-PAY.1 – FR-PAY.5, NFR-SEC.3, NFR-REL.2 |
+| AI "Snap & Detect" (camera capture, confidence score, history, low-confidence flagging + expert review) | `farmer/diagnose.php`, `farmer/diagnosis_history.php`, `admin/diagnoses.php` | FR-AI.1 – FR-AI.6 |
+| Treatment & pesticide recommendations, editable by experts | `farmer/diagnose.php`, `admin/diseases.php` | FR-REC.1 – FR-REC.3 |
+| Knowledge Hub video tutorials, search, related-tutorial recommendations | `knowledge/*`, `admin/*tutorial*`, farmer dashboard | FR-EDU.1 – FR-EDU.4 |
+| Admin: users (suspend / remove / create experts), listings, reports, disputes, AI log, audit log | `admin/*` | FR-ADM.1 – FR-ADM.4, NFR-SEC.5 |
+| In-app notifications (🔔) for orders, payments, diagnoses, disputes | `shared/notifications.php` | FR-MKT.5, FR-NOT.1 – FR-NOT.3 |
+| Quick-start guides for farmers, buyers, admins | `help.php` | SRS 2.6 |
+| English UI with strings externalised for Sinhala/Tamil | `lang/en.php` | NFR-LOC.1, NFR-LOC.2 |
+| Trained CNN model (TensorFlow/Keras) + inference API | `ai_model/` | FR-AI.2, FR-AI.3, NFR-REL.3, NFR-MAINT.2 |
 
 ## Requirements
 
@@ -29,49 +32,77 @@ A PHP/MySQL web application implementing the system described in the research pr
    /Applications/XAMPP/htdocs/mushroom-system   (Mac)
    /opt/lampp/htdocs/mushroom-system   (Linux)
    ```
+   Any folder name works: the base URL is detected automatically.
 2. **Start Apache and MySQL** from the XAMPP Control Panel.
-3. **Create the database**: open `http://localhost/phpmyadmin`, click **Import**, and import `database/schema.sql`. This creates the `mushroom_system` database, all tables, and seed data (disease catalogue, tutorial categories, sample tutorials, and a default admin account).
-4. **Check the DB config**: `config/db.php` already matches XAMPP's defaults (`host=localhost`, `user=root`, `password=''`). Edit it only if your local MySQL uses different credentials.
-5. **Check the base URL**: `config/app.php` sets `BASE_URL` to `/mushroom-system`. If you copied the project into a differently named folder, update this constant to match.
-6. **Open the site**: go to `http://localhost/mushroom-system/index.php`.
+3. **Create the database**: open `http://localhost/phpmyadmin`, click **Import**, choose `database/schema.sql` and press **Go**. This creates the `mushroom_system` database with all tables and demo data.
+   > Re-importing drops and recreates the database (fresh start).
+4. **Check the DB config**: `config/db.php` already matches XAMPP's defaults (`host=localhost`, `user=root`, `password=''`). Edit it only if your MySQL uses a password.
+5. **Open the site**: `http://localhost/mushroom-system/`
 
-## Default Logins
+## Demo Accounts
 
 | Role | Email | Password |
 |---|---|---|
 | Admin | admin@mushroom.lk | Admin@123 |
+| Farmer | farmer@mushroom.lk | Farmer@123 |
+| Buyer (hotel) | buyer@mushroom.lk | Buyer@123 |
+| Agricultural Expert | expert@mushroom.lk | Expert@123 |
 
-Farmer and buyer accounts are created via the **Register** page. Change the admin password after first login (no "change password" screen is provided yet — update it directly in the `users` table via phpMyAdmin using `password_hash()`, or extend the admin panel).
+New farmer/buyer accounts are created via **Register**. Each new account must enter a 6-digit OTP. XAMPP has no mail server by default, so with `DEMO_MODE = true` (in `config/app.php`) the OTP and password-reset links are also shown on screen. Set it to `false` once SMTP or an SMS service is configured.
+
+**Payment test cards:** any 16-digit number with a future `MM/YY` expiry succeeds. `4000 0000 0000 0002` is always declined, so you can demonstrate failed payments.
+
+## Suggested Demo Flow (for viva / evaluation)
+
+1. **Buyer** → Marketplace → filter → open a listing → place an order.
+2. **Farmer** → 🔔 notification → Orders → **Confirm**.
+3. **Buyer** → My Orders → **Pay Now** → try the decline card, then a valid card → receipt.
+4. **Farmer** → **Mark Completed** → **Buyer** → **Rate Farmer**.
+5. **Farmer** → **Snap & Detect** → upload a photo → diagnosis, confidence, treatment, related video.
+6. **Expert / Admin** → AI Diagnosis Log → review a case → farmer sees the advice in history.
+7. **Admin** → Reports, Disputes, Audit Log.
 
 ## Project Structure
 
 ```
-config/            Database connection & app constants
-includes/          Shared bootstrap, auth guards, helpers, AI classifier
-auth/              Register / login / logout
-farmer/            Farmer dashboard, listings, orders, Snap & Detect
-buyer/             Buyer dashboard, marketplace, orders, payment, reviews
-knowledge/         Public Knowledge Hub (tutorials)
-admin/             Admin dashboard, user/listing/tutorial management, AI log
-assets/            CSS, JS, and uploaded images (listings, diagnoses, tutorials)
-database/schema.sql  Full schema + seed data
+config/              Database connection & app constants (BASE_URL, DEMO_MODE, AI_API_URL)
+includes/            Shared bootstrap, auth guards, helpers, AI classifier
+auth/                Register / OTP verify / login / logout / forgot & reset password
+farmer/              Farmer dashboard, listings, orders, Snap & Detect, diagnosis history
+buyer/               Buyer dashboard, marketplace, orders, payment, reviews
+shared/              Profile, notifications, transactions, receipts, disputes (farmer + buyer)
+knowledge/           Public Knowledge Hub (tutorials)
+admin/               Admin/expert panel: users, listings, tutorials, treatments, reports, disputes, AI log, audit log
+ai_model/            Python CNN training script + Flask inference API
+lang/                UI strings (English; add si.php / ta.php for Sinhala / Tamil)
+assets/              CSS and uploaded images (listings, diagnoses, profiles, tutorials)
+database/schema.sql  Full schema + seed/demo data
+help.php             In-app quick-start guides
 ```
 
 ## About the AI "Snap & Detect" Module
 
-`includes/ai_classifier.php` currently ships with a **lightweight colour-signature heuristic** built on PHP's GD extension (already bundled with XAMPP), so the full marketplace + diagnosis + payment flow runs end-to-end without needing a GPU, Python, or any external service. It classifies an uploaded photo into **Healthy**, **Green Mold**, **Bacterial Blotch**, or **Pest Attack** based on colour/brightness patterns, and always returns a confidence score, exactly matching the FR-AI requirements and the diagnosis history/low-confidence-flagging behaviour in the SRS.
+Two classifiers sit behind a single function, `classify_mushroom_image()` in `includes/ai_classifier.php` (NFR-MAINT.2):
 
-This is a stand-in for the trained Convolutional Neural Network described in the proposal's methodology (Section 4.5 — trained on 500+ labelled images, evaluated with a confusion matrix). To plug in the real model once it is trained:
+1. **Trained CNN (as in the proposal methodology)**: `ai_model/train.py` trains a MobileNetV2 transfer-learning CNN with data augmentation on your labelled dataset (500+ images in `ai_model/dataset/<Healthy|Green Mold|Bacterial Blotch|Pest Attack>/`). It reports accuracy, precision and recall, and saves a confusion-matrix chart (NFR-REL.3). `ai_model/app.py` serves the model as a REST API.
+   ```
+   cd ai_model
+   pip install -r requirements.txt
+   python train.py --data dataset
+   python app.py                    # http://127.0.0.1:5000/predict
+   ```
+   Then set `AI_API_URL` in `config/app.php` to `'http://127.0.0.1:5000/predict'`.
+2. **Built-in fallback**: while `AI_API_URL` is empty (or the Python service is down), a lightweight colour-signature heuristic using PHP's GD extension runs instead. The website therefore works on plain XAMPP with no Python. It is a placeholder, not a trained model.
 
-1. Expose the trained CNN through a small inference API (e.g. a Python Flask endpoint, or TensorFlow.js if you want it in-browser).
-2. In `includes/ai_classifier.php`, replace the body of `classify_mushroom_image()` with a call to that API.
-3. Keep the same return shape: `['disease' => string, 'confidence' => float, 'disease_id' => int|null]`.
-
-No other file needs to change — this is exactly the separation required by NFR-MAINT.2 in the SRS.
+Every result stores which model produced it (`diagnoses.model_version`). Expert-confirmed labels (`reviewed_disease_id`) can be exported to grow the training dataset.
 
 ## About the Payment Gateway
 
 `buyer/payment.php` implements a **simulated** secure payment gateway: it validates card-shaped input, never stores raw card numbers (only a masked reference), and marks the order as paid. This satisfies the SRS's payment requirements for demonstration purposes without needing live merchant credentials. To go live, swap the validation/insert block for a real gateway SDK call (e.g. **PayHere**, the most common Sri Lankan payment gateway) while keeping the same `payments` table and success/failure branching.
+
+## Technology Note
+
+SRS section 2.4 suggests React/Node.js on cloud hosting. This implementation uses PHP + MySQL so it runs directly on **XAMPP**, as required for local demonstration. The modules, database design and REST-style AI service boundary follow the SRS, so the front end could be moved to React later without changing the database or the AI model.
 
 ## Known Limitations (carried over from the proposal)
 

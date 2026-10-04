@@ -15,6 +15,15 @@ if (!$listing) {
     redirect('/buyer/marketplace.php');
 }
 
+// Supplier reviews (FR-MKT.7)
+$reviews = $pdo->prepare(
+    'SELECT r.*, u.full_name AS buyer_name, u.business_name FROM reviews r JOIN users u ON u.id = r.buyer_id
+     WHERE r.farmer_id = ? ORDER BY r.created_at DESC LIMIT 5'
+);
+$reviews->execute([$listing['farmer_id']]);
+$reviews = $reviews->fetchAll();
+$avgRating = $reviews ? array_sum(array_column($reviews, 'rating')) / count($reviews) : null;
+
 $pageTitle = $listing['mushroom_type'];
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -25,7 +34,9 @@ include __DIR__ . '/../includes/header.php';
     <div style="flex:1; min-width:260px;">
       <h1 class="mt-0"><?= e($listing['mushroom_type']) ?></h1>
       <p class="price" style="font-size:1.4rem;"><?= format_money($listing['price_per_kg']) ?> / kg</p>
-      <p class="muted">Sold by <strong><?= e($listing['farmer_name']) ?></strong>, <?= e($listing['farmer_address'] ?: 'Sri Lanka') ?></p>
+      <p class="muted">Sold by <strong><?= e($listing['farmer_name']) ?></strong>, <?= e($listing['location'] ?: ($listing['farmer_address'] ?: 'Sri Lanka')) ?>
+        <?php if ($avgRating): ?><br><span class="stars"><?= str_repeat('★', (int) round($avgRating)) ?></span> <?= number_format($avgRating, 1) ?>/5<?php endif; ?></p>
+      <?php if ($listing['harvest_date']): ?><p class="muted">Harvested: <?= format_date($listing['harvest_date']) ?></p><?php endif; ?>
       <p><?= nl2br(e($listing['description'] ?: 'No additional description provided.')) ?></p>
       <p class="muted">Available quantity: <?= e($listing['quantity_kg']) ?> kg</p>
       <p class="muted">Harvest date: <?= format_date($listing['harvest_date']) ?></p>
@@ -48,5 +59,17 @@ include __DIR__ . '/../includes/header.php';
     </div>
   </div>
 </div>
+
+<?php if ($reviews): ?>
+  <h2>Reviews of this farmer</h2>
+  <?php foreach ($reviews as $r): ?>
+    <div class="card" style="margin-bottom:10px;">
+      <span class="stars"><?= str_repeat('★', (int) $r['rating']) . str_repeat('☆', 5 - (int) $r['rating']) ?></span>
+      <strong><?= e($r['business_name'] ?: $r['buyer_name']) ?></strong>
+      <span class="muted"> &middot; <?= format_date($r['created_at']) ?></span>
+      <?php if ($r['comment']): ?><p style="margin:6px 0 0;"><?= e($r['comment']) ?></p><?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

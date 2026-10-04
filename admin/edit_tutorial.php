@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-require_role('admin');
+require_role(['admin', 'expert']);
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM tutorials WHERE id = ?');
@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare(
             'UPDATE tutorials SET category_id=?, title=?, description=?, video_url=?, thumbnail=?, related_disease_id=? WHERE id=?'
         )->execute([$categoryId, $title, $description ?: null, $videoUrl, $thumbnail, $relatedDiseaseId, $id]);
+        log_admin_action('Updated tutorial #' . $id . ' (' . $title . ')');
         flash('success', 'Tutorial updated.');
         redirect('/admin/tutorials.php');
     } else {

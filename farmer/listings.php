@@ -27,9 +27,13 @@ include __DIR__ . '/../includes/header.php';
           <span class="badge badge-<?= e($l['status']) ?>"><?= e(ucfirst(str_replace('_', ' ', $l['status']))) ?></span>
           <h3 style="margin: 8px 0 4px;"><?= e($l['mushroom_type']) ?></h3>
           <p class="price"><?= format_money($l['price_per_kg']) ?> / kg</p>
-          <p class="muted">Available: <?= e($l['quantity_kg']) ?> kg</p>
+          <p class="muted">Available: <?= e($l['quantity_kg']) ?> kg<?= $l['location'] ? ' &middot; 📍 ' . e($l['location']) : '' ?></p>
           <a href="<?= BASE_URL ?>/farmer/edit_listing.php?id=<?= (int) $l['id'] ?>" class="btn btn-small btn-outline">Edit</a>
-          <a href="<?= BASE_URL ?>/farmer/delete_listing.php?id=<?= (int) $l['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Remove this listing?')">Remove</a>
+          <form method="post" action="<?= BASE_URL ?>/farmer/delete_listing.php" style="display:inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int) $l['id'] ?>">
+            <button type="submit" class="btn btn-small btn-danger" onclick="return confirm('Remove this listing?')">Remove</button>
+          </form>
         </div>
       </div>
     <?php endforeach; ?>

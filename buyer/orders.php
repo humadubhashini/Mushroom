@@ -39,9 +39,11 @@ include __DIR__ . '/../includes/header.php';
             <a href="<?= BASE_URL ?>/buyer/payment.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small">Pay Now</a>
           <?php elseif ($o['status'] === 'completed' && !$o['has_review']): ?>
             <a href="<?= BASE_URL ?>/buyer/review.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small btn-outline">Rate Farmer</a>
-          <?php else: ?>
-            <span class="muted">&mdash;</span>
           <?php endif; ?>
+          <?php if (in_array($o['status'], ['paid', 'completed'], true)): ?>
+            <a href="<?= BASE_URL ?>/shared/receipt.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small btn-outline">Receipt</a>
+          <?php endif; ?>
+          <a href="<?= BASE_URL ?>/shared/dispute.php?order_id=<?= (int) $o['id'] ?>" class="btn btn-small btn-outline" title="Report a problem">⚠</a>
         </td>
       </tr>
     <?php endforeach; ?>

@@ -41,6 +41,10 @@ try {
     $pdo->prepare('UPDATE listings SET quantity_kg = ?, status = ? WHERE id = ?')
         ->execute([max(0, $remaining), $newStatus, $listingId]);
 
+    notify($listing['farmer_id'],
+        'New order #' . $orderId . ': ' . $quantity . ' kg of ' . $listing['mushroom_type'] . ' from ' . current_user()['full_name'] . '.',
+        '/farmer/orders.php');
+
     $pdo->commit();
     flash('success', 'Order placed! Waiting for the farmer to confirm before payment.');
     redirect('/buyer/orders.php');
