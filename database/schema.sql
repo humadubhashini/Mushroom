@@ -358,7 +358,11 @@ INSERT INTO mushroom_types (name, name_si, name_ta, scientific_name, description
 INSERT INTO listings (farmer_id, mushroom_type_id, mushroom_type, description, quantity_kg, price_per_kg, harvest_date, location) VALUES
 (2, 1, 'Oyster Mushroom', 'Fresh American oyster mushrooms, grown on sawdust substrate without chemicals.', 120, 650, CURDATE(), 'Gampaha'),
 (2, 2, 'Abalone Mushroom', 'Firm-textured abalone mushrooms, ideal for hotel kitchens.', 40, 900, CURDATE(), 'Gampaha'),
-(2, 3, 'Button Mushroom', 'Clean white button mushrooms, graded and packed in 1kg trays.', 60, 1400, CURDATE(), 'Gampaha');
+(2, 3, 'Button Mushroom', 'Clean white button mushrooms, graded and packed in 1kg trays.', 60, 1400, CURDATE(), 'Gampaha'),
+(2, 4, 'Milky Mushroom', 'Large, firm milky-white mushrooms with a long shelf life.', 30, 1000, CURDATE(), 'Gampaha'),
+(2, 5, 'Paddy Straw Mushroom', 'Fresh paddy straw mushrooms, harvested young for a delicate flavour.', 30, 900, CURDATE(), 'Gampaha'),
+(2, 6, 'Pink Oyster Mushroom', 'Bright pink oyster mushrooms, ideal for restaurant presentation.', 30, 800, CURDATE(), 'Gampaha'),
+(2, 7, 'Shiitake Mushroom', 'Premium shiitake grown on hardwood sawdust blocks.', 30, 2500, CURDATE(), 'Gampaha');
 
 -- Disease catalogue used by the AI classifier and treatment engine
 INSERT INTO disease_types (name, name_si, name_ta, description, description_si, description_ta, treatment, treatment_si, treatment_ta, pesticide_recommendation, pesticide_recommendation_si, pesticide_recommendation_ta, prevention, prevention_si, prevention_ta) VALUES
