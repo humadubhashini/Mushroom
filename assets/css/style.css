@@ -292,14 +292,3 @@ body.lang-si, body.lang-ta { line-height: 1.7; }
 .filter-form .filter-actions .btn { margin-top: 0; }
 .listing-photo img { width: 100%; height: 260px; object-fit: cover; display: block; }
 .listing-photo .pic-fallback { height: 260px; }
-
-/* Contact page */
-.contact-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 20px 0 30px; }
-.contact-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px; transition: box-shadow .15s; }
-a.contact-card:hover { box-shadow: 0 6px 16px rgba(31, 91, 58, .12); }
-.contact-card .icon { font-size: 1.6rem; }
-.contact-card .label { color: var(--muted); font-size: 0.88rem; }
-.contact-card strong { color: var(--green-dark); word-break: break-word; }
-.contact-card.facebook .icon, .contact-card.facebook strong { color: #1877f2; }
-.footer-contact a { color: inherit; margin: 0 8px; white-space: nowrap; }
-.contact-card .icon svg { width: 28px; height: 28px; }

@@ -312,32 +312,3 @@ function status_label($status) {
 
 /** Default profile picture (inline SVG, works offline). */
 const AVATAR_PLACEHOLDER = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23e4f5e9'/%3E%3Ccircle cx='48' cy='38' r='18' fill='%232e7d53'/%3E%3Cpath d='M14 92c4-20 18-30 34-30s30 10 34 30z' fill='%232e7d53'/%3E%3C/svg%3E";
-
-/**
- * Creates the feedback table on first use, so existing installations get the
- * Contact / feedback feature without re-importing the database.
- */
-function ensure_feedback_table() {
-    global $pdo;
-    $pdo->exec(
-        "CREATE TABLE IF NOT EXISTS feedback (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NULL,
-            type ENUM('suggestion','question','complaint','other') NOT NULL DEFAULT 'suggestion',
-            subject VARCHAR(200) NOT NULL,
-            message TEXT NOT NULL,
-            status ENUM('new','read','replied') NOT NULL DEFAULT 'new',
-            admin_reply TEXT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            replied_at TIMESTAMP NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
-}
-
-/** Telephone number in tel: link form (digits and + only). */
-function tel_link($phone) {
-    return 'tel:' . preg_replace('/[^0-9+]/', '', $phone);
-}
-
-const FACEBOOK_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><path fill="currentColor" d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>';

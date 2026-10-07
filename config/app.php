@@ -27,14 +27,7 @@ function detect_base_url(): string {
 }
 define('BASE_URL', detect_base_url());
 define('APP_NAME', 'Mushroom Direct');
-define('APP_VERSION', '2.3');
-
-// Public contact details shown on the Contact page and in the footer.
-// Replace these with the project's real phone number, email and Facebook page.
-define('CONTACT_PHONE', '+94 77 123 4567');
-define('CONTACT_EMAIL', 'info@mushroomdirect.lk');
-define('CONTACT_FACEBOOK_URL', 'https://www.facebook.com/MushroomDirectLK');
-define('CONTACT_FACEBOOK_NAME', 'Mushroom Direct');
+define('APP_VERSION', '2.2');
 
 // Demo mode: XAMPP has no mail server configured by default, so OTP codes and
 // password-reset links are also shown on screen. Set to false once a real

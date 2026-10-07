@@ -241,23 +241,6 @@ CREATE TABLE disputes (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- Feedback / suggestions sent from the Contact page
--- (also created automatically by ensure_feedback_table())
--- ------------------------------------------------------------
-CREATE TABLE feedback (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NULL,
-  type ENUM('suggestion','question','complaint','other') NOT NULL DEFAULT 'suggestion',
-  subject VARCHAR(200) NOT NULL,
-  message TEXT NOT NULL,
-  status ENUM('new','read','replied') NOT NULL DEFAULT 'new',
-  admin_reply TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  replied_at TIMESTAMP NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
-
--- ------------------------------------------------------------
 -- Audit log of administrative actions
 -- Covers NFR-SEC.5
 -- ------------------------------------------------------------
