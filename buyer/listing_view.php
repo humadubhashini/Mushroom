@@ -52,7 +52,7 @@ include __DIR__ . '/../includes/header.php';
           <input type="number" step="0.1" min="0.1" max="<?= e($listing['quantity_kg']) ?>" name="quantity_kg" required id="orderQty">
           <p class="muted" id="orderTotal" style="margin:4px 0 0;"></p>
           <label><?= te('listing.delivery_date') ?></label>
-          <input type="date" name="delivery_date" min="<?= date('Y-m-d') ?>">
+          <input type="date" name="delivery_date" min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
           <button type="submit" class="btn"><?= te('listing.place_order') ?></button>
         </form>
         <script>

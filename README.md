@@ -8,7 +8,7 @@ A PHP/MySQL web application implementing the system described in the research pr
 
 | Module | Pages | SRS Requirements |
 |---|---|---|
-| Registration, OTP email verification, login, password reset, profile, role-based access (Farmer / Buyer / Admin / Agricultural Expert) | `auth/*`, `shared/profile.php` | FR-AUTH.1 – FR-AUTH.6, NFR-SEC.2, NFR-SEC.4 |
+| Registration, OTP email verification, admin approval of farmers, login, password reset, profile, role-based access (Farmer / Buyer / Admin / Agricultural Expert) | `auth/*`, `shared/profile.php` | FR-AUTH.1 – FR-AUTH.6, NFR-SEC.2, NFR-SEC.4 |
 | Direct B2B marketplace: list, edit, remove, search/filter by type, location, quantity, price; bulk orders; order status; ratings & reviews | `farmer/*listing*`, `buyer/*` | FR-MKT.1 – FR-MKT.7 |
 | Secure payment gateway (card / bank transfer / mobile wallet), digital receipts, transaction history, failure handling without double charging | `buyer/payment.php`, `shared/receipt.php`, `shared/transactions.php` | FR-PAY.1 – FR-PAY.5, NFR-SEC.3, NFR-REL.2 |
 | AI "Snap & Detect" (camera capture, confidence score, all-class scores, description / treatment / pesticide / prevention, history, low-confidence flagging + expert review) | `farmer/diagnose.php`, `farmer/diagnosis_history.php`, `admin/diagnoses.php` | FR-AI.1 – FR-AI.6 |
@@ -54,7 +54,7 @@ Use the 🌐 **English | සිංහල | தமிழ்** bar at the top of e
 | Buyer (hotel) | buyer@mushroom.lk | Buyer@123 |
 | Agricultural Expert | expert@mushroom.lk | Expert@123 |
 
-New farmer/buyer accounts are created via **Register**. Each new account must enter a 6-digit OTP. XAMPP has no mail server by default, so with `DEMO_MODE = true` (in `config/app.php`) the OTP and password-reset links are also shown on screen. Set it to `false` once SMTP or an SMS service is configured.
+New farmer/buyer accounts are created via **Register**. New farmers must also be approved by an admin (**Admin Panel → Manage Users → Approve**) before they can publish listings. Each new account must enter a 6-digit OTP. XAMPP has no mail server by default, so with `DEMO_MODE = true` (in `config/app.php`) the OTP and password-reset links are also shown on screen. Set it to `false` once SMTP or an SMS service is configured.
 
 **Payment test cards:** any 16-digit number with a future `MM/YY` expiry succeeds. `4000 0000 0000 0002` is always declined, so you can demonstrate failed payments.
 

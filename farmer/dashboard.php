@@ -49,6 +49,10 @@ include __DIR__ . '/../includes/header.php';
 
 <h1><?= te('dash.welcome', ['name' => current_user()['full_name']]) ?></h1>
 
+<?php if (!farmer_is_approved($farmerId)): ?>
+  <div class="alert alert-info">⏳ <?= te('farmer.pending_approval') ?></div>
+<?php endif; ?>
+
 <div class="stat-grid">
   <div class="stat-card"><div class="num"><?= (int) $listingCount ?></div><div class="label"><?= te('farmer.active_listings') ?></div></div>
   <div class="stat-card"><div class="num"><?= (int) $pendingOrders ?></div><div class="label"><?= te('farmer.pending_orders') ?></div></div>

@@ -54,6 +54,7 @@ include __DIR__ . '/../includes/header.php';
       <div class="card"><h3>🛡️ <?= te('diag.prevention') ?></h3><p><?= nl2br(e(tr_field($disease, 'prevention'))) ?></p></div>
     </div>
   <?php endif; ?>
+  <div class="alert alert-info" style="margin:16px 0 0;">ℹ️ <?= te('diag.disclaimer') ?></div>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

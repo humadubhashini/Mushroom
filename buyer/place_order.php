@@ -25,6 +25,12 @@ if (!is_numeric($quantity) || $quantity <= 0 || $quantity > $listing['quantity_k
     redirect('/buyer/listing_view.php?id=' . $listingId);
 }
 
+// Table C.2 business rule: the delivery date must be after the order date.
+if ($deliveryDate && (!strtotime($deliveryDate) || $deliveryDate <= date('Y-m-d'))) {
+    flash('error', t('common.err_date'));
+    redirect('/buyer/listing_view.php?id=' . $listingId);
+}
+
 $totalPrice = round($quantity * $listing['price_per_kg'], 2);
 
 $pdo->beginTransaction();

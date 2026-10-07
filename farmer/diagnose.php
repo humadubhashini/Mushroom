@@ -138,7 +138,15 @@ include __DIR__ . '/../includes/header.php';
         <div class="card"><h3>🧪 <?= te('diag.pesticide') ?></h3><p><?= nl2br(e(tr_field($disease, 'pesticide_recommendation'))) ?></p></div>
         <div class="card"><h3>🛡️ <?= te('diag.prevention') ?></h3><p><?= nl2br(e(tr_field($disease, 'prevention'))) ?></p></div>
       </div>
+    <?php else: ?>
+      <?php // Table C.3 exception: no treatment record -> general hygiene advice and contact an expert. ?>
+      <div class="detail-grid">
+        <div class="card"><h3>🛡️ <?= te('diag.prevention') ?></h3><p><?= nl2br(e(tr_field($diseaseRows['Healthy'] ?? [], 'prevention'))) ?></p></div>
+      </div>
     <?php endif; ?>
+
+    <?php // Section 4.7.3 / Table 4.9: a diagnosis is advice only. ?>
+    <div class="alert alert-info" style="margin:16px 0 0;">ℹ️ <?= te('diag.disclaimer') ?></div>
 
     <?php if ($relatedTutorial): ?>
       <p style="margin-top:16px;"><a href="<?= BASE_URL ?>/knowledge/view.php?id=<?= (int) $relatedTutorial['id'] ?>" class="btn btn-outline">📺 <?= te('diag.watch') ?>: <?= e(tr_field($relatedTutorial, 'title')) ?></a></p>

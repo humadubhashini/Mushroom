@@ -11,6 +11,7 @@ $revenue = $pdo->query("SELECT COALESCE(SUM(total_price),0) s FROM orders WHERE 
 $diagnosisCount = $pdo->query('SELECT COUNT(*) c FROM diagnoses')->fetch()['c'];
 $lowConfidenceCount = $pdo->query('SELECT COUNT(*) c FROM diagnoses WHERE low_confidence_flag = 1')->fetch()['c'];
 $openDisputes = $pdo->query("SELECT COUNT(*) c FROM disputes WHERE status = 'open'")->fetch()['c'];
+$pendingFarmers = $pdo->query("SELECT COUNT(*) c FROM users WHERE role = 'farmer' AND is_approved = 0")->fetch()['c'];
 
 $pageTitle = $isAdmin ? 'Admin Dashboard' : 'Expert Dashboard';
 include __DIR__ . '/../includes/header.php';
@@ -26,6 +27,7 @@ include __DIR__ . '/../includes/header.php';
   <div class="stat-card"><div class="num"><?= (int) $orderCount ?></div><div class="label">Total Orders</div></div>
   <div class="stat-card"><div class="num"><?= format_money($revenue) ?></div><div class="label">Platform GMV</div></div>
   <div class="stat-card"><div class="num"><?= (int) $openDisputes ?></div><div class="label">Open Disputes</div></div>
+  <div class="stat-card"><div class="num"><?= (int) $pendingFarmers ?></div><div class="label"><a href="<?= BASE_URL ?>/admin/users.php?role=farmer">Farmers Awaiting Approval</a></div></div>
   <?php endif; ?>
   <div class="stat-card"><div class="num"><?= (int) $diagnosisCount ?></div><div class="label">AI Diagnoses (<?= (int) $lowConfidenceCount ?> low-confidence)</div></div>
 </div>

@@ -312,3 +312,28 @@ function status_label($status) {
 
 /** Default profile picture (inline SVG, works offline). */
 const AVATAR_PLACEHOLDER = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23e4f5e9'/%3E%3Ccircle cx='48' cy='38' r='18' fill='%232e7d53'/%3E%3Cpath d='M14 92c4-20 18-30 34-30s30 10 34 30z' fill='%232e7d53'/%3E%3C/svg%3E";
+
+/**
+ * Adds the farmer approval column to databases created before it existed,
+ * so existing installations keep working without a re-import. Existing
+ * users are treated as already approved.
+ */
+function ensure_approval_column() {
+    global $pdo;
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    if (!$pdo->query("SHOW COLUMNS FROM users LIKE 'is_approved'")->fetch()) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN is_approved TINYINT(1) NOT NULL DEFAULT 1 AFTER is_verified");
+    }
+}
+
+/** True when the administrator has approved this farmer (UC-13, Figure 4.7). */
+function farmer_is_approved($userId) {
+    global $pdo;
+    $stmt = $pdo->prepare('SELECT is_approved FROM users WHERE id = ?');
+    $stmt->execute([$userId]);
+    return (bool) ($stmt->fetch()['is_approved'] ?? false);
+}

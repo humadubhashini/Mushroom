@@ -38,6 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE users SET is_verified = 1, otp_code = NULL, otp_expires_at = NULL WHERE id = ?')
             ->execute([$pending['id']]);
         unset($_SESSION['pending_verification']);
+        if ($pending['role'] === 'farmer' && !$pending['is_approved']) {
+            // Figure 4.7, step 5: raise a verification request to the administrator.
+            foreach ($pdo->query("SELECT id FROM users WHERE role = 'admin' AND status = 'active'")->fetchAll() as $admin) {
+                notify($admin['id'], 'Farmer ' . $pending['full_name'] . ' (' . $pending['email'] . ') is waiting for approval.', '/admin/users.php?role=farmer');
+            }
+        }
         flash('success', t('otp.verified'));
         redirect('/auth/login.php');
     }

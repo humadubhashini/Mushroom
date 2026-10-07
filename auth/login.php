@@ -53,7 +53,7 @@ include __DIR__ . '/../includes/header.php';
     <label><?= te('form.password') ?></label>
     <input type="password" name="password" required>
 
-    <button type="submit" class="btn"><?= te('login.button') ?></button>
+    <button type="submit" class="btn"><?= te('login.title') ?></button>
   </form>
   <p class="muted"><a href="<?= BASE_URL ?>/auth/forgot_password.php"><?= te('login.forgot') ?></a></p>
   <p class="muted"><?= te('login.no_account') ?> <a href="<?= BASE_URL ?>/auth/register.php"><?= te('login.register_here') ?></a></p>

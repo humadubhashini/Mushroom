@@ -39,6 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE listings SET status = 'removed' WHERE farmer_id = ? AND status = 'active'")->execute([$userId]);
         log_admin_action('Suspended user ' . $target['email']);
         flash('success', 'User suspended and their active listings hidden.');
+    } elseif ($action === 'approve' && $target['role'] === 'farmer') {
+        // Figure 4.7, steps 6-8: verify the farmer, then send the activation notice.
+        $pdo->prepare('UPDATE users SET is_approved = 1 WHERE id = ?')->execute([$userId]);
+        notify($userId, 'notif.farmer_approved', '/farmer/add_listing.php');
+        log_admin_action('Approved farmer ' . $target['email']);
+        flash('success', 'Farmer approved. They can now publish listings.');
     } elseif ($action === 'activate') {
         $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([$userId]);
         log_admin_action('Activated user ' . $target['email']);
@@ -87,7 +93,7 @@ include __DIR__ . '/../includes/header.php';
   <tr><th>Name</th><th>Email</th><th>Role</th><th>Business</th><th>Status</th><th>Joined</th><th>Action</th></tr>
   <?php foreach ($users as $u): ?>
     <tr>
-      <td><?= e($u['full_name']) ?><?= $u['is_verified'] ? '' : ' <span class="badge badge-pending">Unverified</span>' ?></td>
+      <td><?= e($u['full_name']) ?><?= $u['is_verified'] ? '' : ' <span class="badge badge-pending">Unverified</span>' ?><?= $u['role'] === 'farmer' && !$u['is_approved'] ? ' <span class="badge badge-pending">Awaiting approval</span>' : '' ?></td>
       <td><?= e($u['email']) ?></td>
       <td><?= e(ucfirst($u['role'])) ?></td>
       <td><?= e($u['business_name'] ?: '-') ?></td>
@@ -98,6 +104,9 @@ include __DIR__ . '/../includes/header.php';
           <form method="post" style="display:inline">
             <?= csrf_field() ?>
             <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+            <?php if ($u['role'] === 'farmer' && !$u['is_approved']): ?>
+              <button type="submit" name="action" value="approve" class="btn btn-small">Approve</button>
+            <?php endif; ?>
             <?php if ($u['status'] === 'active'): ?>
               <button type="submit" name="action" value="suspend" class="btn btn-small btn-danger" onclick="return confirm('Suspend this user?')">Suspend</button>
             <?php else: ?>

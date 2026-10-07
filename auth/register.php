@@ -36,13 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $stmt = $pdo->prepare(
-            'INSERT INTO users (role, full_name, email, phone, password_hash, business_name, address, is_verified)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
+            'INSERT INTO users (role, full_name, email, phone, password_hash, business_name, address, is_verified, is_approved)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'
         );
+        // Farmers must also be approved by an administrator before they can
+        // publish listings (UC-13, Figure 4.7); buyers are approved at once.
         $stmt->execute([
             $role, $fullName, $email, $phone,
             password_hash($password, PASSWORD_BCRYPT),
             $businessName ?: null, $address ?: null,
+            $role === 'farmer' ? 0 : 1,
         ]);
         $userId = (int) $pdo->lastInsertId();
         clear_old();

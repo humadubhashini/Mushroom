@@ -68,8 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             notify($buyerId, 'notif.payment_success', '/shared/receipt.php?order_id=' . $order['id'], ['amount' => format_money($order['total_price']), 'order' => $order['id']]);
             notify($order['farmer_id'], 'notif.payment_received', '/shared/receipt.php?order_id=' . $order['id'], ['amount' => format_money($order['total_price']), 'order' => $order['id']]);
 
+            // Back to the order list with the masked reference (Figure 5.5);
+            // the digital receipt is available from the Receipt button.
             flash('success', t('pay.success', ['ref' => $gateway['reference']]));
-            redirect('/shared/receipt.php?order_id=' . $order['id']);
+            redirect('/buyer/orders.php');
         } catch (Exception $e) {
             $pdo->rollBack();
             flash('error', t('pay.already'));
@@ -94,7 +96,8 @@ function gateway_charge(string $method, array $input): array {
         if (!preg_match('/^\d{3,4}$/', trim($input['cvv'] ?? ''))) $errors[] = t('pay.err_cvv');
         if ($errors) return ['errors' => $errors, 'approved' => false, 'reference' => '', 'message' => ''];
 
-        $reference = 'CARD-' . substr($cardNumber, -4) . '-' . strtoupper(bin2hex(random_bytes(3)));
+        $brand = match ($cardNumber[0]) { '4' => 'VISA', '5' => 'MASTER', '3' => 'AMEX', default => 'CARD' };
+        $reference = $brand . '-' . substr($cardNumber, -4) . '-' . strtoupper(bin2hex(random_bytes(3)));
         if ($cardNumber === '4000000000000002') {
             return ['errors' => [], 'approved' => false, 'reference' => $reference, 'message' => 'pay.declined'];
         }

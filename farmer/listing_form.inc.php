@@ -3,6 +3,12 @@
  * Shared create/edit listing logic for farmer/add_listing.php and
  * farmer/edit_listing.php. Expects $pdo, $farmerId and $listing (null for new).
  */
+// UC-03 pre-condition: the farmer's account must be approved by an administrator.
+if (!farmer_is_approved($farmerId)) {
+    flash('error', t('farmer.pending_approval'));
+    redirect('/farmer/dashboard.php');
+}
+
 $types = $pdo->query('SELECT * FROM mushroom_types WHERE is_active = 1 ORDER BY sort_order')->fetchAll();
 $typeById = array_column($types, null, 'id');
 
@@ -29,6 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_numeric($quantity) || $quantity <= 0) $errors[] = t('listing.err_qty');
     if (!is_numeric($price) || $price <= 0) $errors[] = t('listing.err_price');
     if (!in_array($status, ['active', 'sold_out'], true)) $errors[] = t('listing.err_status');
+    // Table C.1: the harvest date cannot be in the future.
+    if ($harvestDate && (!strtotime($harvestDate) || $harvestDate > date('Y-m-d'))) $errors[] = t('common.err_date');
+
+    // Figure 4.7, step 11 (checkDuplicates): one active listing per mushroom type per farmer.
+    $dup = $pdo->prepare(
+        "SELECT id FROM listings WHERE farmer_id = ? AND status = 'active' AND id != ?
+         AND (mushroom_type_id = ? OR (mushroom_type_id IS NULL AND LOWER(mushroom_type) = LOWER(?)))"
+    );
+    $dup->execute([$farmerId, $listing['id'] ?? 0, $typeId ?? 0, $typeName]);
+    if ($typeName !== '' && $dup->fetch()) $errors[] = t('listing.err_duplicate');
 
     $imageError = null;
     $imageFile = handle_image_upload('image', UPLOAD_LISTINGS, $imageError);
@@ -98,7 +114,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <label><?= te('listing.harvest_date') ?></label>
-    <input type="date" name="harvest_date" value="<?= e($f['harvest_date']) ?>">
+    <input type="date" name="harvest_date" value="<?= e($f['harvest_date']) ?>" max="<?= date('Y-m-d') ?>">
 
     <label><?= te('listing.location') ?></label>
     <input type="text" name="location" value="<?= e($f['location']) ?>" placeholder="<?= te('market.location_ph') ?>">

@@ -26,6 +26,7 @@ CREATE TABLE users (
   address VARCHAR(255),
   profile_image VARCHAR(255),
   is_verified TINYINT(1) NOT NULL DEFAULT 0,
+  is_approved TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Farmers need admin approval before listing (UC-13, Figure 4.7)',
   otp_code VARCHAR(255) NULL COMMENT 'Hashed one-time verification code (FR-AUTH.2)',
   otp_expires_at DATETIME NULL,
   reset_token VARCHAR(255) NULL COMMENT 'Hashed password-reset token (FR-AUTH.4)',
